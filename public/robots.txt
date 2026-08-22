@@ -1,0 +1,7 @@
+# robots.txt for Portfolio Website
+User-agent: *
+Allow: /
+Disallow: /admin
+
+# Sitemap location
+Sitemap: https://steven-portfolio.vercel.app/sitemap.xml
