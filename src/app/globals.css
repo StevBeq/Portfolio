@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  --font-unbounded: var(--font-unbounded), ui-sans-serif, system-ui, sans-serif;
+  --font-serif-italic: var(--font-serif-italic), ui-serif, Georgia, serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  /* "Benang Biru" Monotonic Dawn Unified Palette */
+  --bg-dark: #0b0d12;
+  --bg-navy: #0d1524;
+  --bg-cloud: #f4f5f8;
+  --ink-dark: #10131a;
+  --ink-light: #f4f5f8;
+  --blue-royal: #2f6bf2;
+  --blue-tint: #c7d8fc;
+  --blue-wash: #9db8fb;
+  /* Global "Benang Biru" Sketch-Reveal Thread Contract */
+  --thread: #2f6bf2;
+  --thread-mid: #9db8fb;
+  --thread-light: #c7d8fc;
+  --thread-w: 2px;
+  --vermilion: #e0462e;
+  --star-yellow: #ffd23f;
+  --hairline-dark: rgba(255, 255, 255, 0.1);
+  --hairline-light: rgba(16, 19, 26, 0.08);
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* Keep native scroll unlocked when Lenis is paused (e.g., Layer 2 Interactive Dashboard) */
+.lenis.lenis-stopped {
+  overflow: auto;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--ink-light);
+  font-family: var(--font-sans);
+  overflow-x: clip;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-unbounded {
+  font-family: var(--font-unbounded);
+}
+
+.font-serif-italic {
+  font-family: var(--font-serif-italic);
+  font-style: italic;
+}
+
+/* On-demand GPU promotion toggled via ScrollTrigger onToggle (<= 3 elements per active section) */
+.is-animating {
+  will-change: transform, opacity, clip-path;
+}
+
+/* Lightweight compositor helper */
+.gpu-layer {
+  backface-visibility: hidden;
+}
+
+/* Respect prefers-reduced-motion gracefully */
+@media (prefers-reduced-motion: reduce) {
+  .l2-tab-enter,
+  .l2-modal-pop,
+  .l2-backdrop-fade {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Zero-Delay Ultra-Fluid Layer 2 Micro-Motion (150ms GPU transform+opacity only) */
+@keyframes l2TabEnter {
+  from {
+    opacity: 0.45;
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes l2ModalPop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes l2BackdropFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.l2-tab-enter {
+  animation: l2TabEnter 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.l2-modal-pop {
+  animation: l2ModalPop 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.l2-backdrop-fade {
+  animation: l2BackdropFade 120ms ease-out both;
+}

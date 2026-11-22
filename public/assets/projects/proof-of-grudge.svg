@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" fill="none">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1280" y2="720" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#12141C"/>
+      <stop offset="100%" stop-color="#090A0F"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="78%" cy="22%" r="55%">
+      <stop offset="0%" stop-color="#FF4D00" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#FF4D00" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg1)"/>
+  <rect width="1280" height="720" fill="url(#glow1)"/>
+  <!-- Browser Header -->
+  <rect x="48" y="36" width="1184" height="56" rx="14" fill="#181B26" stroke="#FFFFFF" stroke-opacity="0.1"/>
+  <circle cx="82" cy="64" r="7" fill="#E0462E"/>
+  <circle cx="106" cy="64" r="7" fill="#FACC15"/>
+  <circle cx="130" cy="64" r="7" fill="#10B981"/>
+  <rect x="440" y="50" width="400" height="28" rx="14" fill="#0B0D12" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <text x="640" y="69" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="13">proof-of-grudge.vercel.app</text>
+  <!-- Left Vault Card -->
+  <rect x="48" y="120" width="710" height="548" rx="22" fill="#141824" stroke="#FFFFFF" stroke-opacity="0.1"/>
+  <rect x="82" y="154" width="170" height="28" rx="14" fill="#FF4D00" fill-opacity="0.18" stroke="#FF4D00" stroke-opacity="0.5"/>
+  <text x="167" y="172" text-anchor="middle" fill="#FF6B35" font-family="monospace" font-size="12" font-weight="700">NEAR TESTNET · MPC</text>
+  <text x="82" y="236" fill="#F4F2EC" font-family="sans-serif" font-size="42" font-weight="800">Proof-Of-Grudge</text>
+  <text x="82" y="274" fill="#94A3B8" font-family="sans-serif" font-size="18">Keyless Dead-Man's Switch · Deterministic Sepolia ETH Vault</text>
+  <!-- Metric Strip -->
+  <rect x="82" y="316" width="200" height="106" rx="16" fill="#0D1018" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <text x="104" y="352" fill="#64748B" font-family="monospace" font-size="12">DEPLOYMENT</text>
+  <text x="104" y="394" fill="#10B981" font-family="monospace" font-size="24" font-weight="700">keys: []</text>
+  <rect x="302" y="316" width="200" height="106" rx="16" fill="#0D1018" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <text x="324" y="352" fill="#64748B" font-family="monospace" font-size="12">SIGNATURES</text>
+  <text x="324" y="394" fill="#F4F2EC" font-family="monospace" font-size="24" font-weight="700">NEAR MPC</text>
+  <rect x="522" y="316" width="200" height="106" rx="16" fill="#0D1018" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <text x="544" y="352" fill="#64748B" font-family="monospace" font-size="12">BOND MODEL</text>
+  <text x="544" y="394" fill="#FF6B35" font-family="monospace" font-size="24" font-weight="700">SYMMETRIC</text>
+  <!-- Timeline Bar -->
+  <rect x="82" y="458" width="640" height="172" rx="16" fill="#0D1018" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <text x="108" y="494" fill="#94A3B8" font-family="monospace" font-size="13">HEARTBEAT CHALLENGE WINDOW</text>
+  <rect x="108" y="520" width="588" height="18" rx="9" fill="#1E293B"/>
+  <rect x="108" y="520" width="410" height="18" rx="9" fill="#FF4D00"/>
+  <text x="108" y="576" fill="#F4F2EC" font-family="monospace" font-size="16" font-weight="700">STATUS: ARMED · 14D 06H 22M REMAINING</text>
+  <text x="108" y="606" fill="#64748B" font-family="monospace" font-size="12">Replace with real landscape screenshot in /public/assets/projects/</text>
+  <!-- Right Chain Flow Panel -->
+  <rect x="786" y="120" width="446" height="548" rx="22" fill="#141824" stroke="#FFFFFF" stroke-opacity="0.1"/>
+  <text x="820" y="168" fill="#F4F2EC" font-family="monospace" font-size="14" font-weight="700">CROSS-CHAIN RELEASE FLOW</text>
+  <rect x="820" y="198" width="378" height="110" rx="16" fill="#0D1018" stroke="#2563EB" stroke-opacity="0.45"/>
+  <text x="846" y="236" fill="#60A5FA" font-family="monospace" font-size="12">01 // NEAR CONTRACT STATE</text>
+  <text x="846" y="274" fill="#F4F2EC" font-family="sans-serif" font-size="20" font-weight="700">Verify Expiry &amp; Bond</text>
+  <line x1="1009" y1="308" x2="1009" y2="354" stroke="#FF4D00" stroke-width="3" stroke-dasharray="6 6"/>
+  <rect x="820" y="354" width="378" height="110" rx="16" fill="#0D1018" stroke="#FF4D00" stroke-opacity="0.5"/>
+  <text x="846" y="392" fill="#FF6B35" font-family="monospace" font-size="12">02 // MPC SIGNER NETWORK</text>
+  <text x="846" y="430" fill="#F4F2EC" font-family="sans-serif" font-size="20" font-weight="700">Sign Deterministic ETH Tx</text>
+  <line x1="1009" y1="464" x2="1009" y2="510" stroke="#10B981" stroke-width="3" stroke-dasharray="6 6"/>
+  <rect x="820" y="510" width="378" height="118" rx="16" fill="#0D1018" stroke="#10B981" stroke-opacity="0.5"/>
+  <text x="846" y="548" fill="#34D399" font-family="monospace" font-size="12">03 // SEPOLIA SETTLEMENT</text>
+  <text x="846" y="586" fill="#F4F2EC" font-family="sans-serif" font-size="20" font-weight="700">Trustless Payout Released</text>
+</svg>

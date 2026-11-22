@@ -1,60 +1,33 @@
 # Dependencies
-node_modules/
+/node_modules
 /.pnp
-.pnp.js
+.pnp.*
 
-# Environment Variables & Secrets
+# Next.js build & caches
+/.next/
+/out/
+/build/
+next-env.d.ts
+*.tsbuildinfo
+
+# Vercel
+.vercel
+
+# Environment files
 .env
 .env*.local
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.pem
-*.key
-*.cert
-*.credentials
-*.secret
 
-# Internal Project Specs & Sensitive Documents
-ARCHITECTURE.md
-DESIGN.md
-MASTER_SPEC.md
-PRD.md
-RULES.md
-SCHEMA.md
-*.md
-!README.md
-
-# Next.js Build Outputs
-.next/
-out/
-build/
-dist/
-
-# TypeScript Cache
-tsconfig.tsbuildinfo
-*.tsbuildinfo
-next-env.d.ts
-
-# Logs & Debugging
+# Logs & OS artifacts
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-*.log
-
-# IDE & Editor Files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS Metadata
 .DS_Store
 Thumbs.db
 
-# Database / Local Stores
-*.sqlite
-*.sqlite3
-*.db
+# Local-only reference media & internal planning docs (not needed in deployment)
+/Assets/
+/Referensi Design+animasi/
+/AUDIT-REVISI-V2.md
+/DESIGN-DISCUSSION-BRIEF.md
+/SKETCH-REVEAL-DISCUSSION.md
+/PRD.md

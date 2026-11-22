@@ -1,22 +1,41 @@
-# Steven Arnaldo — Full-Stack & UI/UX Architect Portfolio
+# StevBeq — Portfolio
 
-A modern, high-performance developer portfolio built with Next.js 15, TypeScript, Tailwind CSS, GSAP, and Framer Motion.
+Personal portfolio of **Steven Arnaldo Setiawan (`@StevBeq`)**, Fullstack Web & Mobile Developer based in Yogyakarta, Indonesia.
 
-## 🚀 Tech Stack
-- **Framework:** Next.js 15 (App Router, SSG static export)
+Built with a dual-layer architecture combining a 60fps scroll-driven showcase (**Layer 1**) and a zero-scroll interactive dashboard (**Layer 2**).
+
+## Tech Stack
+
+- **Framework:** Next.js 15 (App Router) & React 19
 - **Language:** TypeScript
-- **Styling:** Tailwind CSS & Vanilla CSS Design System
-- **Motion & Interactions:** Framer Motion, GSAP, Canvas 2D
-- **Icons:** Lucide React
+- **Styling:** Tailwind CSS v4
+- **Motion & Smooth Scroll:** GSAP (`ScrollTrigger`, `Flip`, `CustomEase`) + Lenis
+- **Icons:** Lucide React & custom SVG brand marks
 
-## 🛠️ Getting Started
+## Highlights
+
+- **Layer 1 — Scroll Showcase:** Split-shutter opening, interactive 3D orbital meteor cosmos (`HeroInkExplosionCanvas`), POV zoom into core tech stack, full-viewport interactive ASCII-to-photo portrait (`AsciiParticlePortrait`), pinned project showcase (`PinnedProjectShowcase`), and pull-to-explore cartoon portal transition.
+- **Layer 2 — Interactive Light Hub:** Single-viewport desktop dashboard (`Overview`, `Projects`, `History`, `Stack`) with instant tab switching, detail showcase modal, and direct contact actions, while unmounting Layer 1 completely for zero background CPU usage.
+
+## Local Development
+
 ```bash
-# Install dependencies
 npm install
-
-# Run local development server
 npm run dev
-
-# Build production bundle
-npm run build
 ```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Production Build & Deployment
+
+```bash
+npm run build
+npm run start
+```
+
+Ready for zero-config deployment on [Vercel](https://vercel.com) (Framework Preset: **Next.js**).
+
+## Contact
+
+- **GitHub:** [github.com/StevBeq](https://github.com/StevBeq)
+- **Email:** stevenarnald@gmail.com

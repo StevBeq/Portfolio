@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#120E1E"/>
+  <rect x="48" y="42" width="1184" height="636" rx="24" fill="#181328" stroke="#A855F7" stroke-opacity="0.3"/>
+  <text x="92" y="106" fill="#C084FC" font-family="monospace" font-size="14" font-weight="700">STEVBEQ R&amp;D // SCHEDULE FLOW KRS &amp; NEAR-POLYGRAPH</text>
+  <text x="92" y="156" fill="#F8FAFC" font-family="sans-serif" font-size="40" font-weight="900">Academic &amp; Developer Tooling</text>
+  <!-- Schedule Grid Mockup -->
+  <rect x="92" y="198" width="520" height="432" rx="18" fill="#0E0B18" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <text x="122" y="238" fill="#F8FAFC" font-family="monospace" font-size="14" font-weight="700">SCHEDULE_FLOW_KRS</text>
+  <rect x="122" y="264" width="214" height="84" rx="12" fill="#7C3AED" fill-opacity="0.35" stroke="#A855F7"/>
+  <text x="142" y="302" fill="#FFFFFF" font-family="sans-serif" font-size="15" font-weight="700">Pemrograman Web</text>
+  <text x="142" y="328" fill="#E9D5FF" font-family="monospace" font-size="11">MON · 08:00 - 10:30</text>
+  <rect x="356" y="300" width="224" height="84" rx="12" fill="#2563EB" fill-opacity="0.35" stroke="#60A5FA"/>
+  <text x="376" y="338" fill="#FFFFFF" font-family="sans-serif" font-size="15" font-weight="700">Mobile Flutter</text>
+  <text x="376" y="364" fill="#BFDBFE" font-family="monospace" font-size="11">TUE · 10:30 - 13:00</text>
+  <rect x="122" y="394" width="320" height="84" rx="12" fill="#10B981" fill-opacity="0.28" stroke="#34D399"/>
+  <text x="142" y="432" fill="#FFFFFF" font-family="sans-serif" font-size="15" font-weight="700">Sistem Basis Data</text>
+  <text x="142" y="458" fill="#A7F3D0" font-family="monospace" font-size="11">WED · 0 CONFLICTS DETECTED · READY</text>
+  <text x="122" y="592" fill="#64748B" font-family="monospace" font-size="12">Interactive conflict-free KRS course visualizer</text>
+  <!-- Code Terminal Mockup -->
+  <rect x="644" y="198" width="544" height="432" rx="18" fill="#0E0B18" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <text x="676" y="238" fill="#38BDF8" font-family="monospace" font-size="14" font-weight="700">NEAR-POLYGRAPH // TYPESCRIPT</text>
+  <text x="676" y="294" fill="#94A3B8" font-family="monospace" font-size="15">$ npm run verify-stream</text>
+  <text x="676" y="332" fill="#34D399" font-family="monospace" font-size="15">✓ TypeScript strict schema validated</text>
+  <text x="676" y="368" fill="#C084FC" font-family="monospace" font-size="15">✓ Vue + Vite + Supabase modules synced</text>
+  <text x="676" y="404" fill="#FACC15" font-family="monospace" font-size="15">✓ 60FPS interactive motion pipeline ready</text>
+  <rect x="676" y="456" width="480" height="134" rx="14" fill="#181328" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <text x="702" y="502" fill="#F8FAFC" font-family="sans-serif" font-size="18" font-weight="700">Open-Source Playground</text>
+  <text x="702" y="536" fill="#94A3B8" font-family="monospace" font-size="12">github.com/StevBeq · Replace dummy SVG anytime</text>
+</svg>
