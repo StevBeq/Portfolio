@@ -44,11 +44,16 @@ interface ClickSpark {
 interface HeroInkExplosionCanvasProps {
   /** Flip to true right as the cinema split-shutter opens */
   active: boolean;
-  /** Pause completely once Profile section takes over -> 0% CPU */
+  /** Pause completely once Cool Cloud daylight iris takes over -> 0% CPU */
   paused?: boolean;
-  /** Mutable 0..1 ref: 0 = Hero outside cosmos view, 1 = POV INSIDE the center of the universe (Section 2 Stack!) */
-  cosmosZoomRef?: React.RefObject<number>;
-  /** Mutable 0..1 ref: fades cosmos out cleanly when entering Section 3 Profile */
+  /**
+   * Mutable 0..2 continuous 3-POV camera stage inside the SAME universe:
+   * 0.0 = Hero (outside orbital view)
+   * 1.0 = Tech Stack (POV flown INSIDE the cosmos core — rings surround viewport!)
+   * 2.0 = Profile (cinematic angled POV shift — diagonal slow drift behind portrait!)
+   */
+  cosmosStageRef?: React.RefObject<number>;
+  /** Mutable 0..1 ref: fades cosmos cleanly only when Cool Cloud daylight iris opens */
   cosmosExitRef?: React.RefObject<number>;
   className?: string;
 }
@@ -68,12 +73,12 @@ const METEOR_COLORS = [
  * - Steady cosmic rotation (NO full-world dizzying mouse tilt)
  * - Smooth per-meteor fluid cursor deflection ("belok / mencar halus" around pointer!)
  * - Real expanding physical click shockwaves + micro sparks (ZERO angle teleport!)
- * - POV Zoom-Inside-The-Universe continuity from Hero (Scene 1) into Tech Stack (Scene 2)!
+ * - Continuous 3-POV camera continuity across Hero -> Tech Stack -> Profile inside ONE universe!
  */
 export function HeroInkExplosionCanvas({
   active,
   paused = false,
-  cosmosZoomRef,
+  cosmosStageRef,
   cosmosExitRef,
   className = "",
 }: HeroInkExplosionCanvasProps) {
@@ -232,12 +237,19 @@ export function HeroInkExplosionCanvas({
       const dtSec = Math.min(0.05, Math.max(0.008, deltaMs / 1000));
       const dtNorm = dtSec * 60;
 
-      const insideZoom = Math.max(0, Math.min(1, cosmosZoomRef?.current ?? 0));
+      const stage = Math.max(0, Math.min(2, cosmosStageRef?.current ?? 0));
       const exitP = Math.max(0, Math.min(1, cosmosExitRef?.current ?? 0));
 
-      // Fade smoothly only when transitioning from Section 2 Stack -> Section 3 Profile
-      // While INSIDE the universe in Section 2 (insideZoom = 1), stay richly visible (0.58) around edges!
-      const globalAlpha = (1 - insideZoom * 0.36) * Math.max(0, 1 - exitP * 1.25);
+      // Continuous 3-POV curves inside ONE universe:
+      // stage 0..1 -> Hero to Stack (dive inside cosmos core)
+      // stage 1..2 -> Stack to Profile (cinematic POV pan & diagonal tilt into calm deep space)
+      const s01 = Math.min(1, stage);
+      const ease01 = s01 * s01 * (3 - 2 * s01);
+      const s12 = Math.max(0, stage - 1);
+      const ease12 = s12 * s12 * (3 - 2 * s12);
+
+      const globalAlpha =
+        (1 - ease01 * 0.34 - ease12 * 0.28) * Math.max(0, 1 - exitP * 1.25);
       if (globalAlpha <= 0.01) {
         ctx.clearRect(0, 0, width, height);
         return;
@@ -245,26 +257,24 @@ export function HeroInkExplosionCanvas({
 
       ctx.clearRect(0, 0, width, height);
 
-      const cx = width * 0.5;
-      const cy = height * 0.5;
+      const cx = width * 0.5 + ease12 * width * 0.04;
+      const cy = height * 0.5 - ease12 * height * 0.03;
       const fov = Math.max(680, width * 0.74);
 
-      // Intro hyperspeed deceleration (0 -> 1.6s) -> calm regal orbital flow
+      // Intro hyperspeed deceleration (0 -> 1.6s) -> regal Hero -> calm Stack -> serene slow Profile drift
       const introSurge = Math.max(0, 1 - elapsed / 1.55);
-      const speedMult = (1 + introSurge * introSurge * 4.4) * (1 - insideZoom * 0.25);
+      const speedMult =
+        (1 + introSurge * introSurge * 4.4) * (1 - ease01 * 0.28 - ease12 * 0.34);
 
-      // POV Zoom-Inside-The-Universe:
-      // insideZoom = 0 (Hero) -> viewing orbital rings around STEVEN ARNALDO
-      // insideZoom = 1 (Stack) -> camera flies INSIDE the center of the galaxy so rings surround the viewport!
-      const smoothInside = insideZoom * insideZoom * (3 - 2 * insideZoom);
       const expandMult =
         (1.52 - (1 - introSurge * introSurge) * 0.52) *
-        (1 + smoothInside * 0.88 + exitP * 0.9);
-      const camZOffset = smoothInside * 210 + exitP * 180;
+        (1 + ease01 * 0.85 - ease12 * 0.32 + exitP * 0.85);
+      const camZOffset = ease01 * 210 - ease12 * 95 + exitP * 180;
 
-      // Steady, majestic cosmic axis (NO dizzying full-world mouse swing!)
-      const camYaw = Math.sin(timeSec * 0.16) * 0.045;
-      const camPitch = Math.cos(timeSec * 0.13) * 0.032 + smoothInside * 0.14;
+      // Steady cosmic axis smoothly panning POV from Hero -> Stack Core -> Diagonal Profile Vista!
+      const camYaw = Math.sin(timeSec * 0.16) * 0.04 + ease12 * 0.62;
+      const camPitch =
+        Math.cos(timeSec * 0.13) * 0.03 + ease01 * 0.14 + ease12 * 0.38;
 
       const mx = pointerRef.current.x;
       const my = pointerRef.current.y;
@@ -272,15 +282,21 @@ export function HeroInkExplosionCanvas({
       const hoverRadius = 165;
       const hoverRadSq = hoverRadius * hoverRadius;
 
-      // 1. Background Micro-Starfield (expands subtly outward as camera flies into the universe!)
+      // 1. Background Micro-Starfield (expands & pans smoothly across all 3 POVs!)
       ctx.fillStyle = "#C7D8FC";
       for (let i = 0; i < stars.length; i++) {
         const st = stars[i];
-        const sx = cx + (st.x - cx) * (1 + smoothInside * 0.24 * st.depth);
-        const sy = cy + (st.y - cy) * (1 + smoothInside * 0.24 * st.depth);
-        ctx.globalAlpha = st.a * globalAlpha;
+        const sx =
+          cx +
+          (st.x - width * 0.5) * (1 + ease01 * 0.24 * st.depth) -
+          ease12 * 45 * st.depth;
+        const sy =
+          cy +
+          (st.y - height * 0.5) * (1 + ease01 * 0.24 * st.depth) -
+          ease12 * 22 * st.depth;
+        ctx.globalAlpha = st.a * Math.max(0.35, globalAlpha);
         ctx.beginPath();
-        ctx.arc(sx, sy, st.r * (1 + smoothInside * 0.25), 0, Math.PI * 2);
+        ctx.arc(sx, sy, st.r * (1 + ease01 * 0.22), 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -593,7 +609,7 @@ export function HeroInkExplosionCanvas({
       window.removeEventListener("click", handleClick);
       ro.disconnect();
     };
-  }, [cosmosZoomRef, cosmosExitRef]);
+  }, [cosmosStageRef, cosmosExitRef]);
 
   return (
     <div

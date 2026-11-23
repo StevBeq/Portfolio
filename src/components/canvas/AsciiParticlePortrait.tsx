@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { gsap, isLowEndDevice, prefersReducedMotion } from "@/lib/gsap";
+import { ORBITAL_STACK_ORIGINS } from "@/components/layer1/FluidTechStackLayer";
 
 export type PortraitRenderMode = "ascii" | "hybrid" | "photo";
 
@@ -53,26 +54,6 @@ interface AsciiParticlePortraitProps {
 
 // Bright-on-dark polarity: low luma -> subtle glyphs, high luma -> luminous glyphs
 const ASCII_RAMP_DARK_BG = [".", ":", "-", "=", "+", "*", "c", "v", "s", "S", "B", "%", "#", "@"];
-
-// Exact 16 desktop Tech Stack card coordinates (normalized 0..1) so particles literally burst FROM the 16 cards!
-const STACK_CARD_ORIGINS: ReadonlyArray<readonly [number, number]> = [
-  [0.06, 0.17],
-  [0.16, 0.25],
-  [0.07, 0.39],
-  [0.17, 0.47],
-  [0.06, 0.61],
-  [0.16, 0.69],
-  [0.07, 0.82],
-  [0.18, 0.85],
-  [0.94, 0.17],
-  [0.84, 0.25],
-  [0.93, 0.39],
-  [0.83, 0.47],
-  [0.94, 0.61],
-  [0.84, 0.69],
-  [0.93, 0.82],
-  [0.82, 0.85],
-];
 
 export function AsciiParticlePortrait({
   src = "/assets/me/Foto-Semi-Formal.webp",
@@ -471,7 +452,7 @@ export function AsciiParticlePortrait({
           let stackX: number;
           let stackY: number;
           if (pIdx % 4 !== 0) {
-            const card = STACK_CARD_ORIGINS[pIdx % STACK_CARD_ORIGINS.length];
+            const card = ORBITAL_STACK_ORIGINS[pIdx % ORBITAL_STACK_ORIGINS.length];
             const burstAngle = randA * Math.PI * 2;
             const burstRad = 12 + randB * 135;
             stackX = card[0] * width + Math.cos(burstAngle) * burstRad;

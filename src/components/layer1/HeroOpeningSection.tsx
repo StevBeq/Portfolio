@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   gsap,
   ScrollTrigger,
@@ -20,15 +20,46 @@ import { FluidTechStackLayer } from "@/components/layer1/FluidTechStackLayer";
 // Skip opening cinema shutter when returning from Layer 2 so wake-up is instant
 let hasCompletedOpeningLoader = false;
 
-const LEFT_BIO_WORDS =
-  "Steven Arnaldo Setiawan — a fullstack developer in Yogyakarta who treats every product as one continuous system.".split(
-    " "
-  );
+interface NarrativeSegment {
+  text: string;
+  accent?: boolean;
+}
 
-const RIGHT_BIO_WORDS =
-  "React, Next.js, and Laravel for the web. Flutter and Dart for mobile. PostgreSQL and Supabase underneath.".split(
-    " "
-  );
+const PROFILE_SEGMENTS: NarrativeSegment[] = [
+  { text: "Steven Arnaldo Setiawan — a " },
+  { text: "Fullstack Web & Mobile Developer", accent: true },
+  { text: " based in Yogyakarta. Crafting fast, scalable web platforms with " },
+  { text: "React, Next.js, and Laravel", accent: true },
+  { text: " alongside native-feel " },
+  { text: "Flutter", accent: true },
+  { text: " apps — engineered cleanly from relational schema to final motion." },
+];
+
+type NarrativeToken =
+  | { kind: "space"; id: string }
+  | { kind: "word"; id: string; chars: string[]; accent: boolean };
+
+function buildNarrativeTokens(): NarrativeToken[] {
+  const tokens: NarrativeToken[] = [];
+  let seq = 0;
+  for (const seg of PROFILE_SEGMENTS) {
+    const parts = seg.text.split(/(\s+)/);
+    for (const part of parts) {
+      if (!part) continue;
+      if (/^\s+$/.test(part)) {
+        tokens.push({ kind: "space", id: `sp-${seq++}` });
+      } else {
+        tokens.push({
+          kind: "word",
+          id: `wd-${seq++}`,
+          chars: Array.from(part),
+          accent: Boolean(seg.accent),
+        });
+      }
+    }
+  }
+  return tokens;
+}
 
 export function HeroOpeningSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -38,8 +69,8 @@ export function HeroOpeningSection() {
   const monogramZoomRef = useRef<HTMLDivElement | null>(null);
   const lightStageRef = useRef<HTMLDivElement | null>(null);
 
-  // Zero-rerender mutable refs driving 60fps canvases
-  const cosmosZoomRef = useRef<number>(0);
+  // Zero-rerender mutable refs driving 60fps 3-POV cosmos & ASCII swarm
+  const cosmosStageRef = useRef<number>(0);
   const cosmosExitRef = useRef<number>(0);
   const portraitAssemblyRef = useRef<number>(0);
   const monogramMorphRef = useRef<number>(0);
@@ -51,6 +82,7 @@ export function HeroOpeningSection() {
   const [portraitMode, setPortraitMode] = useState<PortraitRenderMode>("ascii");
   const [wibTime, setWibTime] = useState("12:00:00");
 
+  const narrativeTokens = useMemo(() => buildNarrativeTokens(), []);
   const { scrollToSection, scrollToPosition } = usePortfolioLayer();
 
   // Live Yogyakarta (UTC+7) clock
@@ -112,7 +144,6 @@ export function HeroOpeningSection() {
             },
           });
 
-          // Beat 1 (0.00 -> 1.72s): Unhurried dramatic Royal Blue laser slice (000 -> 100) across monumental STEVBEQ
           loaderTl
             .to(
               counterProxy,
@@ -148,7 +179,6 @@ export function HeroOpeningSection() {
               { scale: 1.04, opacity: 0.52, duration: 1.72, ease: "power2.inOut" },
               0
             )
-            // Beat 2 (1.72 -> 1.90s): 0.18s dramatic flare hold at 100 before blast doors tear open!
             .to(
               ".loader-laser-line",
               { scaleY: 2.2, opacity: 1, duration: 0.14, ease: "power2.out" },
@@ -166,7 +196,6 @@ export function HeroOpeningSection() {
               { opacity: 0, duration: 0.16, ease: "power2.out" },
               1.88
             )
-            // Beat 3 (1.90 -> 2.66s): Dual Cinema Blast Doors rip open vertically -> ~2.5s total opening!
             .to(
               ".loader-shutter-top",
               { yPercent: -100, duration: 0.78, ease: "awwwardsExpo" },
@@ -177,7 +206,6 @@ export function HeroOpeningSection() {
               { yPercent: 100, duration: 0.78, ease: "awwwardsExpo" },
               1.9
             )
-            // Beat 4 (2.06 -> 2.90s): Monumental Hero Typography rises cleanly out of masked floors!
             .to(
               ".hero-mask-rise",
               {
@@ -207,12 +235,12 @@ export function HeroOpeningSection() {
       if (reducedMotion) return;
 
       /* =====================================================================
-       * ONE-TAKE CONTINUOUS CAMERA JOURNEY:
-       * Hero 3D Meteor Cosmos -> POV INSIDE THE UNIVERSE (Section 2 Stack!) ->
-       * Clean Fullscreen ASCII Swarm Portrait (ZERO overlapping boxes!) ->
-       * Face-to-SB Particle Morph -> Vector SB Z-Dive -> Cool Cloud Daylight!
+       * ONE-TAKE 3-POV UNIVERSE + REFERENCE-INSPIRED PROFILE ILLUMINATION
+       * Scene 1 (Hero 0.0 -> 0.24) -> Scene 2 (Orbital Stack 0.24 -> 0.44) ->
+       * Scene 3 (Angled Cosmos + Fullscreen Swarm + Character Illumination 0.44 -> 1.60) ->
+       * Scene 4 (SB Morph & Vector Z-Dive 1.60 -> 2.42) -> Cool Cloud Projects
        * =================================================================== */
-      const TOTAL_TL = 2.15;
+      const TOTAL_TL = 2.42;
       const monogramTargetScale = lowEnd ? 1.45 : 1.98;
 
       const perfTargets = [
@@ -226,7 +254,7 @@ export function HeroOpeningSection() {
           id: "hero-journey",
           trigger: sectionRef.current,
           start: "top top",
-          end: "+=620%",
+          end: "+=700%",
           pin: true,
           scrub: lowEnd ? 0.5 : 0.82,
           anticipatePin: 1,
@@ -240,33 +268,44 @@ export function HeroOpeningSection() {
           onUpdate: (self) => {
             const t = self.progress * TOTAL_TL;
 
-            // POV Zoom INSIDE the 3D Meteor Cosmos across Hero -> Section 2 Stack (0.00 -> 0.24)
-            cosmosZoomRef.current = Math.max(0, Math.min(1, t / 0.24));
+            // Continuous 3-POV stage inside the SAME universe:
+            // Hero (0) -> Stack Core (1) -> Diagonal Profile Vista (2)
+            let nextStage = 0;
+            if (t <= 0.24) {
+              nextStage = Math.max(0, t / 0.24);
+            } else if (t < 0.44) {
+              nextStage = 1;
+            } else if (t <= 0.72) {
+              nextStage = 1 + (t - 0.44) / 0.28;
+            } else {
+              nextStage = 2;
+            }
+            cosmosStageRef.current = nextStage;
 
-            // Smoothly sweep meteors off-screen only when leaving Stack -> entering Profile (0.42 -> 0.56)
-            cosmosExitRef.current = Math.max(0, Math.min(1, (t - 0.42) / 0.14));
-            const shouldPauseCosmos = t > 0.58;
+            // Fade cosmos cleanly ONLY when Cool Cloud daylight iris expands
+            cosmosExitRef.current = Math.max(0, Math.min(1, (t - 1.94) / 0.22));
+            const shouldPauseCosmos = t > 2.18;
             setHeroCosmosPaused((prev) => (prev === shouldPauseCosmos ? prev : shouldPauseCosmos));
 
-            // Fullscreen ASCII Swarm Portrait active ONLY between Stack shatter & SB Vector takeover (Max 1 canvas!)
-            const inSwarm = t >= 0.42 && t <= 1.56;
+            // Fullscreen ASCII Swarm active strictly between Stack burst (0.42) and SB vector takeover (1.84)
+            const inSwarm = t >= 0.42 && t <= 1.84;
             setSwarmActive((prev) => (prev === inSwarm ? prev : inSwarm));
 
-            // Stack-to-Face Fullscreen Magnetic Vortex Gather (t = 0.46 -> 0.82)
-            const gatherNorm = Math.max(0, Math.min(1, (t - 0.46) / 0.36));
+            // Stack-to-Face Fullscreen Magnetic Vortex Gather (0.46 -> 0.76)
+            const gatherNorm = Math.max(0, Math.min(1, (t - 0.46) / 0.3));
             portraitAssemblyRef.current = lowEnd ? 1 : gatherNorm;
 
-            // Face -> Particle Burst -> Giant SB Monogram Morph (t = 1.28 -> 1.49)
-            monogramMorphRef.current = Math.max(0, Math.min(1, (t - 1.28) / 0.21));
+            // Face -> Particle Burst -> Giant SB Monogram Morph (1.60 -> 1.80)
+            monogramMorphRef.current = Math.max(0, Math.min(1, (t - 1.6) / 0.2));
 
-            // Portrait mixed-media progression: ascii -> hybrid -> crisp borderless photo -> back to ascii for SB morph!
+            // Portrait mixed-media progression: ascii -> hybrid -> crisp borderless photo -> back to ascii for SB morph
             if (!lowEnd) {
               const nextMode: PortraitRenderMode =
-                t >= 1.25
+                t >= 1.56
                   ? "ascii"
-                  : t >= 1.08
+                  : t >= 0.8
                   ? "photo"
-                  : t >= 0.94
+                  : t >= 0.7
                   ? "hybrid"
                   : "ascii";
               setPortraitMode((prev) => (prev === nextMode ? prev : nextMode));
@@ -275,7 +314,7 @@ export function HeroOpeningSection() {
         },
       });
 
-      /* -------- PHASE 1 (0.00 -> 0.26): FLY INSIDE THE 3D METEOR COSMOS -> SECTION 2 STACK! -------- */
+      /* -------- PHASE 1 (0.00 -> 0.26): FLY INSIDE THE UNIVERSE -> ORBITAL TECH STACK -------- */
       tl.to(
         sectionRef.current,
         { backgroundColor: "#0D1524", duration: 0.24, ease: "liquidFlow" },
@@ -324,16 +363,10 @@ export function HeroOpeningSection() {
           { opacity: 0, pointerEvents: "none", duration: 0.18, ease: "liquidFlow" },
           0.08
         )
-        // Scene 2 Stack emerges right INSIDE the orbiting 3D meteor cosmos!
-        .fromTo(
-          ".scene2-emblem",
-          { opacity: 0, scale: 0.72, y: -24 },
-          { opacity: 1, scale: 1, y: 0, duration: 0.16, ease: "liquidSettle" },
-          0.14
-        )
+        // Clean decluttered Stack headline & 16 orbital constellation nodes inside cosmos core
         .fromTo(
           ".scene2-editorial",
-          { opacity: 0, y: 30, clipPath: "inset(16% 0% 0% 0%)", pointerEvents: "none" },
+          { opacity: 0, y: 26, clipPath: "inset(16% 0% 0% 0%)", pointerEvents: "none" },
           {
             opacity: 1,
             y: 0,
@@ -352,18 +385,18 @@ export function HeroOpeningSection() {
         )
         .fromTo(
           ".tech-cards-stage",
-          { opacity: 0, scale: 0.9 },
+          { opacity: 0, scale: 0.92 },
           { opacity: 1, scale: 1, duration: 0.18, ease: "liquidRise" },
           0.15
         )
         .fromTo(
           ".tech-card-converge",
-          { opacity: 0, y: 18, scale: 0.85 },
-          { opacity: 1, y: 0, scale: 1, stagger: 0.007, duration: 0.13, ease: "liquidRise" },
+          { opacity: 0, scale: 0.8 },
+          { opacity: 1, scale: 1, stagger: 0.007, duration: 0.13, ease: "liquidRise" },
           0.16
         )
 
-        /* -------- PHASE 2 (0.42 -> 0.56): 16 STACK CARDS SHATTER INTO FULLSCREEN ASCII SWARM! -------- */
+        /* -------- PHASE 2 (0.42 -> 0.56): ORBITAL SHATTER + POV SHIFT -> PORTRAIT SWARM -------- */
         .fromTo(
           ".scene3-fullscreen-swarm",
           { opacity: 0 },
@@ -387,7 +420,7 @@ export function HeroOpeningSection() {
           0.46
         )
         .to(
-          ".scene2-editorial, .scene2-chrome, .scene2-emblem",
+          ".scene2-editorial, .scene2-chrome",
           {
             opacity: 0,
             y: -20,
@@ -398,8 +431,7 @@ export function HeroOpeningSection() {
           0.44
         )
 
-        /* -------- PHASE 3 (0.56 -> 1.24): ULTRA-CLEAN FULLSCREEN ASCII -> HYBRID -> BORDERLESS PHOTO! -------- */
-        // ZERO overlapping boxes, ZERO square heartbeat grid, ZERO crop-marks or circle cutting arms!
+        /* -------- PHASE 3 BEAT A (0.56 -> 0.88): MONUMENTAL BORDERLESS PORTRAIT SHOWCASE -------- */
         .fromTo(
           ".scene3-chrome",
           { opacity: 0 },
@@ -407,109 +439,120 @@ export function HeroOpeningSection() {
           0.56
         )
         .fromTo(
-          ".scene3-bio-left",
-          { x: -28, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.16, ease: "liquidRise" },
-          0.66
+          ".scene3-intro-meta",
+          { y: 16, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.04, duration: 0.16, ease: "liquidRise" },
+          0.62
         )
         .fromTo(
-          ".scene3-bio-right",
-          { x: 28, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.16, ease: "liquidRise" },
+          ".scene3-wordmark",
+          { y: 26, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.04, duration: 0.18, ease: "liquidRise" },
           0.66
-        )
-        .fromTo(
-          ".scene3-bio-mobile",
-          { y: 24, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.14, ease: "liquidRise" },
-          0.66
-        )
-        .fromTo(
-          ".bio-scrub-word",
-          { opacity: 0.28, color: "#94A3B8" },
-          {
-            opacity: 1,
-            color: "#F4F5F8",
-            stagger: 0.004,
-            duration: 0.2,
-            ease: "none",
-          },
-          0.7
         )
 
-        /* -------- PHASE 4 (1.22 -> 1.56): FACE -> PARTICLE SWIRL -> GIANT SB MONOGRAM (ZERO BREAK!) -------- */
+        /* -------- PHASE 3 BEAT B (0.88 -> 1.00): SOFT FOCUS SHIFT -> RADIAL NARRATIVE VEIL -------- */
         .to(
-          ".scene3-bio-left",
-          { x: -34, opacity: 0, duration: 0.12, ease: "liquidFlow" },
-          1.22
+          ".scene3-wordmark, .scene3-intro-meta",
+          { y: 14, opacity: 0, duration: 0.12, ease: "liquidFlow" },
+          0.88
         )
-        .to(
-          ".scene3-bio-right",
-          { x: 34, opacity: 0, duration: 0.12, ease: "liquidFlow" },
-          1.22
+        .fromTo(
+          ".scene3-narrative-veil",
+          { opacity: 0 },
+          { opacity: 1, duration: 0.14, ease: "liquidFlow" },
+          0.88
         )
+
+        /* -------- PHASE 3 BEAT C (0.96 -> 1.54): CHARACTER-BY-CHARACTER WHITE ILLUMINATION -------- */
+        .fromTo(
+          ".scene3-narrative-wrap",
+          { opacity: 0 },
+          { opacity: 1, duration: 0.08, ease: "liquidFlow" },
+          0.95
+        )
+        .fromTo(
+          ".profile-char",
+          { opacity: 0.14, y: 6 },
+          {
+            opacity: 1,
+            y: 0,
+            stagger: 0.0018,
+            duration: 0.03,
+            ease: "none",
+          },
+          0.98
+        )
+        .fromTo(
+          ".scene3-narrative-foot",
+          { y: 12, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.1, ease: "liquidRise" },
+          1.4
+        )
+
+        /* -------- PHASE 4 (1.54 -> 1.84): FACE -> PARTICLE SWIRL -> GIANT SB MONOGRAM -------- */
         .to(
-          ".scene3-bio-mobile, .scene3-chrome",
-          { opacity: 0, duration: 0.12, ease: "liquidFlow" },
-          1.22
+          ".scene3-narrative-wrap, .scene3-narrative-veil, .scene3-chrome",
+          { opacity: 0, duration: 0.1, ease: "liquidFlow" },
+          1.54
         )
         .fromTo(
           ".portal-entry-hud",
           { opacity: 0, y: 10 },
           { opacity: 1, y: 0, duration: 0.14, ease: "liquidFlow" },
-          1.34
+          1.64
         )
         .fromTo(
           ".outlined-name-bg",
           { scale: 0.86, opacity: 0, letterSpacing: "0.14em" },
-          { scale: 1, opacity: 1, letterSpacing: "-0.04em", duration: 0.18, ease: "liquidFlow" },
-          1.34
+          { scale: 1, opacity: 1, letterSpacing: "-0.04em", duration: 0.16, ease: "liquidFlow" },
+          1.64
         )
         .fromTo(
           monogramZoomRef.current,
           { scale: 0.36, opacity: 0 },
-          { scale: 0.36, opacity: 1, duration: 0.09, ease: "liquidFlow" },
-          1.46
+          { scale: 0.36, opacity: 1, duration: 0.08, ease: "liquidFlow" },
+          1.76
         )
         .to(
           ".scene3-fullscreen-swarm",
-          { opacity: 0, duration: 0.09, ease: "liquidFlow" },
-          1.48
+          { opacity: 0, duration: 0.08, ease: "liquidFlow" },
+          1.78
         )
 
-        /* -------- PHASE 5 (1.56 -> 2.15): VECTOR SB Z-DIVE -> LIQUID IRIS -> COOL CLOUD #F4F5F8 DAYLIGHT! -------- */
+        /* -------- PHASE 5 (1.84 -> 2.42): VECTOR SB Z-DIVE -> LIQUID IRIS -> COOL CLOUD #F4F5F8 -------- */
         .to(
           ".portal-entry-hud",
           { opacity: 0, y: -12, duration: 0.12, ease: "liquidFlow" },
-          1.57
+          1.84
         )
         .to(
           ".outlined-name-bg",
           { scale: 1.55, opacity: 0, duration: 0.26, ease: "liquidFlow" },
-          1.57
+          1.84
         )
         .to(
           monogramZoomRef.current,
-          { scale: monogramTargetScale, duration: 0.34, ease: "liquidFlow" },
-          1.56
+          { scale: monogramTargetScale, duration: 0.32, ease: "liquidFlow" },
+          1.84
         )
         .to(
           monogramZoomRef.current,
           { opacity: 0, duration: 0.1, ease: "liquidFlow" },
-          1.82
+          2.08
         )
         .fromTo(
           ".portal-iris-ring",
           { scale: 0.05, opacity: 0 },
-          { scale: 1.7, opacity: 0.88, duration: 0.3, ease: "liquidFlow" },
-          1.67
+          { scale: 1.7, opacity: 0.88, duration: 0.28, ease: "liquidFlow" },
+          1.94
         )
-        .to(".portal-iris-ring", { opacity: 0, duration: 0.1, ease: "liquidFlow" }, 1.9)
+        .to(".portal-iris-ring", { opacity: 0, duration: 0.1, ease: "liquidFlow" }, 2.16)
         .fromTo(
           lightStageRef.current,
           { clipPath: "circle(0% at 50% 50%)" },
-          { clipPath: "circle(130% at 50% 50%)", duration: 0.32, ease: "liquidFlow" },
-          1.69
+          { clipPath: "circle(130% at 50% 50%)", duration: 0.3, ease: "liquidFlow" },
+          1.96
         )
         .fromTo(
           ".portal-reveal-line",
@@ -522,31 +565,31 @@ export function HeroOpeningSection() {
             duration: 0.18,
             ease: "liquidRise",
           },
-          1.85
+          2.1
         )
         .fromTo(
           ".portal-editorial-meta",
           { y: 16, opacity: 0 },
           { y: 0, opacity: 1, stagger: 0.03, duration: 0.14, ease: "liquidRise" },
-          1.93
+          2.18
         )
         .fromTo(
           ".portal-drift-bg",
           { yPercent: 5 },
           { yPercent: -5, duration: 0.32, ease: "none" },
-          1.83
+          2.1
         )
         .fromTo(
           ".portal-drift-mid",
           { yPercent: 8 },
           { yPercent: -10, duration: 0.32, ease: "none" },
-          1.83
+          2.1
         )
         .fromTo(
           ".portal-drift-fg",
           { yPercent: 6 },
           { yPercent: -10, duration: 0.32, ease: "none" },
-          1.83
+          2.1
         );
     },
     { scope: sectionRef }
@@ -630,7 +673,7 @@ export function HeroOpeningSection() {
         </div>
       )}
 
-      {/* ================= CLEAN QUIET ATMOSPHERIC DEPTH (ZERO HEARTBEAT SQUARES!) ================= */}
+      {/* ================= CLEAN QUIET ATMOSPHERIC DEPTH ================= */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 z-0"
@@ -640,16 +683,16 @@ export function HeroOpeningSection() {
         }}
       />
 
-      {/* ================= SHARED 3D ORBITAL METEOR COSMOS (HERO -> POV INSIDE THE UNIVERSE IN SECTION 2!) ================= */}
+      {/* ================= SHARED 3-POV UNIVERSE (HERO -> STACK CORE -> DIAGONAL PROFILE) ================= */}
       <HeroInkExplosionCanvas
         active={heroCosmosActive}
         paused={heroCosmosPaused}
-        cosmosZoomRef={cosmosZoomRef}
+        cosmosStageRef={cosmosStageRef}
         cosmosExitRef={cosmosExitRef}
         className="z-10"
       />
 
-      {/* ================= SCENE 1: INTERACTIVE 3D METEOR HERO (ZERO BUTTONS, FLUID HOVER DEFLECTION!) ================= */}
+      {/* ================= SCENE 1: INTERACTIVE 3D METEOR HERO ================= */}
       <div
         ref={heroStageRef}
         className="hero-stage-shell absolute inset-0 z-20 flex h-full w-full flex-col justify-between px-6 py-4 sm:px-10"
@@ -670,14 +713,14 @@ export function HeroOpeningSection() {
           <nav className="flex items-center gap-5 sm:gap-7">
             <button
               type="button"
-              onClick={() => scrollToJourneyStage(0.16)}
+              onClick={() => scrollToJourneyStage(0.14)}
               className="transition hover:text-white cursor-pointer"
             >
               STACK
             </button>
             <button
               type="button"
-              onClick={() => scrollToJourneyStage(0.47)}
+              onClick={() => scrollToJourneyStage(0.46)}
               className="transition hover:text-white cursor-pointer"
             >
               PROFILE
@@ -700,7 +743,7 @@ export function HeroOpeningSection() {
           </nav>
         </header>
 
-        {/* Monumental Edge-to-Edge Editorial Display (ZERO Buttons, ZERO SaaS Clutter!) */}
+        {/* Monumental Edge-to-Edge Editorial Display */}
         <div className="pointer-events-none relative z-20 mx-auto my-auto flex w-full max-w-7xl flex-col items-center justify-center px-2 text-center">
           <div className="hero-display-line-1 overflow-hidden py-1">
             <h1 className="hero-mask-rise font-display text-[15vw] font-extrabold leading-[0.86] tracking-[-0.04em] text-[#F4F5F8] uppercase drop-shadow-[0_14px_45px_rgba(11,13,18,0.85)] sm:text-[11.5vw] lg:text-[9.5rem]">
@@ -720,7 +763,7 @@ export function HeroOpeningSection() {
           </div>
         </div>
 
-        {/* Minimal Editorial Bottom Telemetry */}
+        {/* Clean Professional Bottom Telemetry */}
         <footer className="hero-bottom-footer hero-chrome-enter relative z-20 mx-auto grid h-14 w-full max-w-7xl shrink-0 grid-cols-2 items-center gap-3 border-t border-white/10 font-mono text-[10px] text-white/50 sm:grid-cols-3 sm:text-[11px]">
           <div className="truncate">
             <span className="text-white/75">YOGYAKARTA · WIB {wibTime}</span>
@@ -730,43 +773,25 @@ export function HeroOpeningSection() {
               className="h-1.5 w-1.5 rounded-full"
               style={{ backgroundColor: "var(--thread)" }}
             />
-            <span className="tracking-[0.22em] uppercase">SWEEP CURSOR · CLICK TO RIPPLE</span>
+            <span className="tracking-[0.22em] uppercase">FULLSTACK WEB &amp; MOBILE</span>
           </div>
           <div className="text-right">
-            <span className="tracking-[0.2em] text-[#C7D8FC] uppercase">SCROLL TO ENTER ↓</span>
+            <span className="tracking-[0.2em] text-[#C7D8FC] uppercase">SCROLL ↓</span>
           </div>
         </footer>
       </div>
 
-      {/* ================= SCENE 2: INSIDE THE UNIVERSE — TECH STACK FLOATING AT THE COSMOS CORE ================= */}
-      <div className="scene2-chrome pointer-events-none absolute top-4 inset-x-0 z-20 mx-auto flex h-14 max-w-7xl items-center justify-between border-b border-white/10 px-6 font-mono text-[11px] text-white/50 opacity-0 sm:px-10">
-        <span>02 // CORE STACK &amp; CAPABILITIES</span>
-        <span className="text-[#9DB8FB]">SCROLL TO EXPLORE PROFILE ↓</span>
-      </div>
-
-      <div className="pointer-events-none absolute inset-x-0 top-[14vh] z-20 flex justify-center">
-        <div className="scene2-emblem flex h-[86px] w-[86px] flex-col items-center justify-center rounded-2xl border border-[#2F6BF2]/30 bg-[#11192B]/90 p-2 text-center opacity-0 shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-md">
-          <img
-            src="/assets/logo/LogoDark.webp"
-            alt="StevBeq Monogram"
-            className="h-10 w-10 rounded-xl object-contain"
-          />
-          <span className="mt-1 font-mono text-[8.5px] font-bold tracking-widest text-[#C7D8FC] uppercase">
-            STEVBEQ
-          </span>
-        </div>
+      {/* ================= SCENE 2: COSMIC ORBITAL CONSTELLATION (NO CLUTTER, NO FLOATING SB CARD!) ================= */}
+      <div className="scene2-chrome pointer-events-none absolute top-4 inset-x-0 z-20 mx-auto flex h-14 max-w-7xl items-center justify-between border-b border-white/10 px-6 font-mono text-[11px] tracking-widest text-white/50 uppercase opacity-0 sm:px-10">
+        <span>02 // CAPABILITIES</span>
+        <span className="text-[#9DB8FB]">WEB &amp; MOBILE ARCHITECTURE</span>
       </div>
 
       <FluidTechStackLayer />
 
-      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6 pt-16">
-        <div className="scene2-editorial flex max-w-xl flex-col items-center text-center opacity-0">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#11192B]/80 px-4 py-1.5 font-mono text-[11px] tracking-wider text-white/75 backdrop-blur-md">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#E0462E]" />
-            <span>END-TO-END ARCHITECTURE</span>
-          </div>
-
-          <h2 className="font-display mt-6 text-4xl font-extrabold tracking-tight text-[#F4F5F8] sm:text-5xl lg:text-[3.5rem] leading-[1.08]">
+      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6">
+        <div className="scene2-editorial flex max-w-lg flex-col items-center text-center opacity-0">
+          <h2 className="font-display text-4xl font-extrabold tracking-tight text-[#F4F5F8] sm:text-5xl lg:text-[3.5rem] leading-[1.08]">
             Built with a{" "}
             <span className="font-serif-italic font-normal text-[#2F6BF2] transition-colors duration-300 hover:text-[#9DB8FB]">
               steady hand
@@ -774,15 +799,14 @@ export function HeroOpeningSection() {
             .
           </h2>
 
-          <p className="mt-5 max-w-md text-sm leading-relaxed text-[#94A3B8] sm:text-base">
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-[#94A3B8] sm:text-base">
             Web platforms and Flutter apps share one discipline: clean architecture first, motion
             last.
           </p>
         </div>
       </div>
 
-      {/* ================= SCENE 3: ULTRA-CLEAN FULLSCREEN ASCII SWARM -> CRISP BORDERLESS PHOTO ================= */}
-      {/* ZERO overlapping boxes, ZERO heartbeat squares, ZERO bracket/circle collisions! */}
+      {/* ================= SCENE 3: CONTINUOUS UNIVERSE + FULLSCREEN SWARM + CHARACTER ILLUMINATION ================= */}
       <div className="scene3-fullscreen-swarm pointer-events-none absolute inset-0 z-[24] opacity-0">
         <AsciiParticlePortrait
           src="/assets/me/Foto-Semi-Formal.webp"
@@ -798,98 +822,96 @@ export function HeroOpeningSection() {
         />
       </div>
 
-      {/* Scene 3 Clean Minimal Top Chrome */}
+      {/* Clean Timeless Top Chrome */}
       <div className="scene3-chrome pointer-events-none absolute inset-x-0 top-4 z-30 mx-auto flex h-14 max-w-7xl items-center justify-between border-b border-white/10 px-6 font-mono text-[11px] tracking-widest text-white/55 uppercase opacity-0 sm:px-10">
         <span>03 // PROFILE</span>
-        <span className="hidden text-[#9DB8FB] sm:inline">
-          {portraitMode === "photo"
-            ? "RESOLVED · STEVEN ARNALDO"
-            : portraitMode === "hybrid"
-            ? "HYBRID · RESOLVING"
-            : "SWARM → FORM · HOVER SHARDS"}
+        <span className="hidden text-white/45 sm:inline">STEVEN ARNALDO SETIAWAN</span>
+        <span>YOGYAKARTA, ID</span>
+      </div>
+
+      {/* Beat A Corner Whispers & Bottom Split STEV / BEQ Framing Portrait */}
+      <div className="scene3-intro-meta pointer-events-none absolute top-24 left-6 z-30 opacity-0 sm:left-10">
+        <p className="font-mono text-[10px] font-bold tracking-[0.22em] text-[#9DB8FB] uppercase">
+          FULLSTACK WEB &amp; MOBILE
+        </p>
+        <p className="mt-1.5 max-w-[210px] text-xs leading-relaxed text-white/65">
+          Crafting scalable web platforms &amp; cross-platform Flutter apps.
+        </p>
+      </div>
+
+      <div className="scene3-intro-meta pointer-events-none absolute top-24 right-6 z-30 opacity-0 sm:right-10">
+        <span className="font-display text-4xl font-extrabold tracking-tight text-white/80 sm:text-5xl">
+          &rsquo;26
         </span>
-        <span>SLEMAN · YOGYAKARTA</span>
       </div>
 
-      {/* Ultra-Clean FRAMELESS Editorial Bio Columns on Outer Margins (ZERO double/triple boxes!) */}
-      <div className="pointer-events-none absolute inset-0 z-30 hidden items-center justify-between px-8 lg:flex xl:px-14">
-        <div className="scene3-bio-left w-[240px] border-l border-[#2F6BF2]/45 pl-5 opacity-0 xl:w-[290px]">
-          <p className="inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] text-white/50 uppercase">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#E0462E]" />
-            01 // IDENTITY
-          </p>
-
-          <h3 className="font-serif-italic mt-2 text-2xl font-normal text-[#9DB8FB] xl:text-[1.75rem]">
-            The person behind the build.
-          </h3>
-
-          <p className="mt-3 text-sm font-medium leading-relaxed xl:text-[14.5px]">
-            {LEFT_BIO_WORDS.map((word, idx) => (
-              <span key={`l-${word}-${idx}`} className="bio-scrub-word mr-1.5 inline-block">
-                {word}
-              </span>
-            ))}
-          </p>
-
-          <div className="mt-5 space-y-1 font-mono text-[10px] text-white/50">
-            <p className="text-white/80">PT. Indo Techno Medic · Programmer</p>
-            <p>UKDW (S1) &amp; UTY (D3) Information Systems</p>
-          </div>
-        </div>
-
-        <div className="scene3-bio-right w-[240px] border-r border-white/15 pr-5 text-right opacity-0 xl:w-[290px]">
-          <p className="font-mono text-[10px] tracking-[0.22em] text-[#9DB8FB] uppercase">
-            02 // ENGINEERING
-          </p>
-
-          <h3 className="font-display mt-2 text-xl font-bold tracking-tight text-[#F4F5F8] xl:text-2xl">
-            From schema to screen.
-          </h3>
-
-          <p className="mt-3 text-sm font-medium leading-relaxed xl:text-[14.5px]">
-            {RIGHT_BIO_WORDS.map((word, idx) => (
-              <span key={`r-${word}-${idx}`} className="bio-scrub-word mr-1.5 inline-block">
-                {word}
-              </span>
-            ))}
-          </p>
-
-          <p className="mt-5 font-mono text-[10px] tracking-wider text-[#C7D8FC]/75 uppercase">
-            Next.js · Flutter · Laravel · PostgreSQL
-          </p>
-        </div>
-      </div>
-
-      {/* Mobile Bottom Bio Fallback (< lg screens) */}
-      <div className="scene3-bio-mobile pointer-events-none absolute inset-x-5 bottom-20 z-30 border-l-2 border-[#2F6BF2] bg-[#0D1524]/80 py-2.5 pr-3 pl-4 opacity-0 backdrop-blur-md lg:hidden">
-        <p className="font-mono text-[10px] font-bold text-[#9DB8FB] uppercase">
-          @{STEVBEQ_PROFILE.handle} · FULLSTACK WEB &amp; MOBILE
-        </p>
-        <p className="mt-1 text-xs leading-relaxed text-white/85">
-          {STEVBEQ_PROFILE.bioScrubText}
-        </p>
-      </div>
-
-      {/* Scene 3 Clean Bottom Chrome (Exact h-14) */}
-      <div className="scene3-chrome pointer-events-none absolute inset-x-0 bottom-4 z-30 mx-auto flex h-14 max-w-7xl items-center justify-between border-t border-white/10 px-6 opacity-0 sm:px-10">
-        <span className="font-unbounded text-2xl font-black leading-none tracking-tighter text-[#F4F5F8] sm:text-4xl">
+      <div className="pointer-events-none absolute inset-x-0 bottom-20 z-[25] mx-auto flex max-w-7xl items-end justify-between px-6 sm:px-10">
+        <span className="scene3-wordmark font-unbounded text-5xl font-black leading-none tracking-tighter text-[#F4F5F8] opacity-0 sm:text-7xl lg:text-[6.5rem]">
           {STEVBEQ_PROFILE.handleSplit[0]}
         </span>
-        <span className="font-mono text-[11px] tracking-widest text-white/45">
-          SCROLL TO CONTINUE ↓
-        </span>
         <span
-          className="font-unbounded text-2xl font-black leading-none tracking-tighter sm:text-4xl"
+          className="scene3-wordmark font-unbounded text-5xl font-black leading-none tracking-tighter opacity-0 sm:text-7xl lg:text-[6.5rem]"
           style={{ color: "var(--thread)" }}
         >
           {STEVBEQ_PROFILE.handleSplit[1]}
         </span>
       </div>
 
-      {/* ================= SCENE 4 (ONE-TAKE SEAMLESS PORTAL): SB MONOGRAM Z-DIVE -> COOL CLOUD #F4F5F8! ================= */}
+      {/* Beat B: Soft Radial Navy Veil (NO hard card border — lets Steven subtly illuminate beneath!) */}
+      <div
+        aria-hidden
+        className="scene3-narrative-veil pointer-events-none absolute inset-0 z-[26] opacity-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 68% 64% at 50% 50%, rgba(9, 17, 38, 0.72) 0%, rgba(13, 21, 36, 0.36) 64%, transparent 100%)",
+        }}
+      />
+
+      {/* Beat C: Reference-Inspired Per-Character White Illumination Narrative */}
+      <div className="scene3-narrative-wrap pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-6 opacity-0">
+        <div className="max-w-[680px] text-left sm:text-center">
+          <p className="font-display text-2xl font-bold leading-[1.32] tracking-tight sm:text-3xl lg:text-[2.15rem]">
+            {narrativeTokens.map((tok) =>
+              tok.kind === "space" ? (
+                <React.Fragment key={tok.id}> </React.Fragment>
+              ) : (
+                <span
+                  key={tok.id}
+                  className={`inline-block whitespace-nowrap ${
+                    tok.accent
+                      ? "font-serif-italic font-normal text-[#9DB8FB]"
+                      : "text-[#F4F5F8]"
+                  }`}
+                >
+                  {tok.chars.map((ch, idx) => (
+                    <span
+                      key={`${tok.id}-${idx}`}
+                      className="profile-char inline-block"
+                    >
+                      {ch}
+                    </span>
+                  ))}
+                </span>
+              )
+            )}
+          </p>
+
+          <p className="scene3-narrative-foot mt-6 font-mono text-[11px] tracking-[0.22em] text-white/55 uppercase opacity-0">
+            7°47&rsquo;S 110°22&rsquo;E · YOGYAKARTA · PT. INDO TECHNO MEDIC · UKDW &amp; UTY
+          </p>
+        </div>
+      </div>
+
+      {/* Scene 3 Clean Minimal Bottom Rail */}
+      <div className="scene3-chrome pointer-events-none absolute inset-x-0 bottom-4 z-30 mx-auto flex h-14 max-w-7xl items-center justify-between border-t border-white/10 px-6 font-mono text-[10px] tracking-[0.2em] text-white/45 uppercase opacity-0 sm:px-10">
+        <span>STEVBEQ · PORTFOLIO</span>
+        <span>SCROLL TO CONTINUE ↓</span>
+      </div>
+
+      {/* ================= SCENE 4 (ONE-TAKE SEAMLESS PORTAL): SB MONOGRAM Z-DIVE -> COOL CLOUD #F4F5F8 ================= */}
       <div className="portal-entry-hud pointer-events-none absolute inset-x-0 top-4 z-30 mx-auto flex h-14 max-w-7xl items-center justify-between border-b border-white/10 px-6 font-mono text-[11px] tracking-widest text-white/45 uppercase opacity-0 sm:px-10">
-        <span>04 // MONOGRAM PORTAL</span>
-        <span className="text-[#9DB8FB]">OPENING DAYLIGHT</span>
+        <span>04 // ARCHIVE</span>
+        <span className="text-[#9DB8FB]">2024 — 2026</span>
       </div>
 
       {/* Outlined Giant STEVBEQ behind the particle-assembled SB Monogram */}
