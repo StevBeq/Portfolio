@@ -40,8 +40,10 @@ interface AsciiParticlePortraitProps {
   defaultMode?: PortraitRenderMode;
   /** Scroll-driven mode ("ascii" -> "hybrid" -> "photo") */
   controlledMode?: PortraitRenderMode;
-  /** Mutable 0..1 ref: 0 = dispersed across 16 Stack cards & full viewport, 1 = assembled into Steven's face */
+  /** Mutable 0..1 ref: 0 = dispersed across Cosmic Hand & orbital deck, 1 = assembled into Steven's face */
   assemblyRef?: React.RefObject<number>;
+  /** Mutable 0..1 ref: 0 = centered 50% showcase, 1 = glided gracefully left (27% desktop / upper mobile) for side-by-side bio */
+  portraitShiftRef?: React.RefObject<number>;
   /** Mutable 0..1 ref: 0 = Steven's face, 1 = re-assembled directly into giant SB Monogram at 50% 50%! */
   monogramMorphRef?: React.RefObject<number>;
   cellSize?: number;
@@ -52,6 +54,23 @@ interface AsciiParticlePortraitProps {
   paused?: boolean;
 }
 
+function computeShiftTransform(width: number, height: number, shift: number) {
+  const s = Math.max(0, Math.min(1, shift));
+  const e = s * s * (3 - 2 * s);
+  if (width >= 768) {
+    return {
+      shiftX: (width * 0.27 - width * 0.5) * e,
+      shiftY: Math.min(10, height * 0.012) * e,
+      scaleMult: 1 - 0.06 * e,
+    };
+  }
+  return {
+    shiftX: 0,
+    shiftY: -height * 0.19 * e,
+    scaleMult: 1 - 0.3 * e,
+  };
+}
+
 // Bright-on-dark polarity: low luma -> subtle glyphs, high luma -> luminous glyphs
 const ASCII_RAMP_DARK_BG = [".", ":", "-", "=", "+", "*", "c", "v", "s", "S", "B", "%", "#", "@"];
 
@@ -60,6 +79,7 @@ export function AsciiParticlePortrait({
   defaultMode = "ascii",
   controlledMode,
   assemblyRef,
+  portraitShiftRef,
   monogramMorphRef,
   cellSize = 4,
   className = "",
@@ -295,7 +315,8 @@ export function AsciiParticlePortrait({
     const drawSoftBorderlessPhoto = (
       width: number,
       height: number,
-      alpha: number
+      alpha: number,
+      shift = 0
     ) => {
       if (!imageRef.current || !cropRef.current || alpha <= 0.01) return;
       const { drawW, drawH, offsetX, offsetY } = computeDrawPlacement(
@@ -303,6 +324,13 @@ export function AsciiParticlePortrait({
         height,
         cropRef.current
       );
+      const { shiftX, shiftY, scaleMult } = computeShiftTransform(width, height, shift);
+      const baseCx = width * 0.5;
+      const baseCy = height * 0.5 + Math.min(18, height * 0.02);
+      const scaledW = drawW * scaleMult;
+      const scaledH = drawH * scaleMult;
+      const destX = baseCx + (offsetX - baseCx) * scaleMult + shiftX;
+      const destY = baseCy + (offsetY - baseCy) * scaleMult + shiftY;
 
       ctx.save();
       ctx.globalAlpha = Math.min(1, alpha);
@@ -312,20 +340,20 @@ export function AsciiParticlePortrait({
         cropRef.current.sy,
         cropRef.current.sw,
         cropRef.current.sh,
-        offsetX,
-        offsetY,
-        drawW,
-        drawH
+        destX,
+        destY,
+        scaledW,
+        scaledH
       );
 
       // Soft bottom feather gradient melting waist smoothly into #0D1524 Navy Bridge (ZERO harsh horizontal cut!)
-      const fadeStart = offsetY + drawH * 0.8;
-      const fadeEnd = offsetY + drawH + 4;
+      const fadeStart = destY + scaledH * 0.8;
+      const fadeEnd = destY + scaledH + 4;
       const grad = ctx.createLinearGradient(0, fadeStart, 0, fadeEnd);
       grad.addColorStop(0, "rgba(13, 21, 36, 0)");
       grad.addColorStop(1, "rgba(13, 21, 36, 1)");
       ctx.fillStyle = grad;
-      ctx.fillRect(offsetX - 12, fadeStart, drawW + 24, fadeEnd - fadeStart + 8);
+      ctx.fillRect(destX - 12, fadeStart, scaledW + 24, fadeEnd - fadeStart + 8);
       ctx.restore();
     };
 
@@ -335,15 +363,20 @@ export function AsciiParticlePortrait({
 
       ctx.clearRect(0, 0, width, height);
       const currentMode = modeRef.current;
+      const shift = portraitShiftRef ? Math.max(0, Math.min(1, portraitShiftRef.current ?? 0)) : 0;
 
       if (currentMode === "photo") {
-        drawSoftBorderlessPhoto(width, height, 1);
+        drawSoftBorderlessPhoto(width, height, 1, shift);
         return;
       }
 
       if (currentMode === "hybrid") {
-        drawSoftBorderlessPhoto(width, height, 0.42);
+        drawSoftBorderlessPhoto(width, height, 0.42, shift);
       }
+
+      const { shiftX, shiftY, scaleMult } = computeShiftTransform(width, height, shift);
+      const baseCx = width * 0.5;
+      const baseCy = height * 0.5 + Math.min(18, height * 0.02);
 
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -353,8 +386,10 @@ export function AsciiParticlePortrait({
       const particles = particlesRef.current;
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
+        const px = baseCx + (p.originX - baseCx) * scaleMult + shiftX;
+        const py = baseCy + (p.originY - baseCy) * scaleMult + shiftY;
         ctx.fillStyle = p.color;
-        ctx.fillText(p.char, p.originX, p.originY);
+        ctx.fillText(p.char, px, py);
       }
     };
 
@@ -529,9 +564,14 @@ export function AsciiParticlePortrait({
       ctx.clearRect(0, 0, width, height);
 
       const assembly = assemblyRef ? Math.max(0, Math.min(1, assemblyRef.current ?? 1)) : 1;
+      const shift = portraitShiftRef ? Math.max(0, Math.min(1, portraitShiftRef.current ?? 0)) : 0;
       const monoMorph = monogramMorphRef
         ? Math.max(0, Math.min(1, monogramMorphRef.current ?? 0))
         : 0;
+
+      const { shiftX, shiftY, scaleMult } = computeShiftTransform(width, height, shift);
+      const baseCx = width * 0.5;
+      const baseCy = height * 0.5 + Math.min(18, height * 0.02);
 
       // Smoothly crossfade photo layer (only visible once face is assembled & before SB morph!)
       const currentMode = modeRef.current;
@@ -557,7 +597,7 @@ export function AsciiParticlePortrait({
       asciiAlpha += (targetAsciiAlpha - asciiAlpha) * 0.16;
 
       if (photoAlpha > 0.01) {
-        drawSoftBorderlessPhoto(width, height, photoAlpha);
+        drawSoftBorderlessPhoto(width, height, photoAlpha, shift);
       }
 
       if (asciiAlpha <= 0.008) return;
@@ -585,31 +625,34 @@ export function AsciiParticlePortrait({
         const p = particles[i];
         if (onlyHaloDust && !p.isAmbientHalo) continue;
 
+        const liveOriginX = baseCx + (p.originX - baseCx) * scaleMult + shiftX;
+        const liveOriginY = baseCy + (p.originY - baseCy) * scaleMult + shiftY;
+
         let targetX: number;
         let targetY: number;
 
         if (monoMorph > 0.001) {
-          // 3A Formation: Face -> Curved Luminous Swirl -> Exact Giant SB Monogram!
-          const dx = p.monoX - p.originX;
-          const dy = p.monoY - p.originY;
+          // 3A Formation: Shifted Left Portrait -> Curved Luminous Swirl -> Exact Giant SB Monogram at Center!
+          const dx = p.monoX - liveOriginX;
+          const dy = p.monoY - liveOriginY;
           const dist = Math.max(1, Math.hypot(dx, dy));
           const perpX = (-dy / dist) * p.swirlDir * p.swirlAmp * 0.85 * monoSwirl;
           const perpY = (dx / dist) * p.swirlDir * p.swirlAmp * 0.85 * monoSwirl;
 
           const easedMono = monoMorph * monoMorph * (3 - 2 * monoMorph);
-          targetX = p.originX + dx * easedMono + perpX;
-          targetY = p.originY + dy * easedMono + perpY;
+          targetX = liveOriginX + dx * easedMono + perpX;
+          targetY = liveOriginY + dy * easedMono + perpY;
         } else {
-          // 2A Formation: Full-Screen 16-Stack Burst -> Curved Magnetic Vortex -> Steven's Face!
-          const dx = p.originX - p.stackX;
-          const dy = p.originY - p.stackY;
+          // 2A Formation: Cosmic Hand & Orbital Deck Burst -> Curved Magnetic Vortex -> Steven's Face!
+          const dx = liveOriginX - p.stackX;
+          const dy = liveOriginY - p.stackY;
           const dist = Math.max(1, Math.hypot(dx, dy));
           const perpX = (-dy / dist) * p.swirlDir * p.swirlAmp * gatherSwirl;
           const perpY = (dx / dist) * p.swirlDir * p.swirlAmp * gatherSwirl;
 
           const easedScatter = scatterFactor * scatterFactor;
-          targetX = p.originX + (p.stackX - p.originX) * easedScatter + perpX;
-          targetY = p.originY + (p.stackY - p.originY) * easedScatter + perpY;
+          targetX = liveOriginX + (p.stackX - liveOriginX) * easedScatter + perpX;
+          targetY = liveOriginY + (p.stackY - liveOriginY) * easedScatter + perpY;
 
           if (onlyHaloDust) {
             targetX += Math.sin(timeSec * 1.2 + i) * 9;
@@ -686,7 +729,7 @@ export function AsciiParticlePortrait({
       window.removeEventListener("pointerleave", handleWindowPointerLeave);
       resizeObserver.disconnect();
     };
-  }, [src, cellSize, tintBlue, repulsionRadius, assemblyRef, monogramMorphRef]);
+  }, [src, cellSize, tintBlue, repulsionRadius, assemblyRef, portraitShiftRef, monogramMorphRef]);
 
   const cycleMode = () => {
     setMode((prev) => (prev === "ascii" ? "hybrid" : prev === "hybrid" ? "photo" : "ascii"));

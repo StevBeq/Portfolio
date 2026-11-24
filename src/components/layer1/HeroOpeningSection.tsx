@@ -10,12 +10,36 @@ import {
 } from "@/lib/gsap";
 import { STEVBEQ_PROFILE } from "@/data/stevbeq";
 import { usePortfolioLayer } from "@/components/providers/SmoothScrollProvider";
-import { HeroInkExplosionCanvas } from "@/components/canvas/HeroInkExplosionCanvas";
+import {
+  HeroInkExplosionCanvas,
+  type AstrolabeHoverState,
+  type AstrolabePulseState,
+  type IntroCinemaState,
+} from "@/components/canvas/HeroInkExplosionCanvas";
 import {
   AsciiParticlePortrait,
   type PortraitRenderMode,
 } from "@/components/canvas/AsciiParticlePortrait";
-import { FluidTechStackLayer } from "@/components/layer1/FluidTechStackLayer";
+import {
+  CAPABILITY_PILLARS,
+  FluidTechStackLayer,
+} from "@/components/layer1/FluidTechStackLayer";
+
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+function computePillarProgress(t: number): number {
+  const seg = (start: number, end: number) => {
+    const p = clamp01((t - start) / (end - start));
+    return p * p * (3 - 2 * p);
+  };
+  if (t <= 0.42) return 0;
+  if (t < 0.54) return seg(0.42, 0.54);
+  if (t <= 0.7) return 1;
+  if (t < 0.82) return 1 + seg(0.7, 0.82);
+  if (t <= 0.98) return 2;
+  if (t < 1.1) return 2 + seg(0.98, 1.1);
+  return 3;
+}
 
 // Skip opening cinema shutter when returning from Layer 2 so wake-up is instant
 let hasCompletedOpeningLoader = false;
@@ -61,6 +85,9 @@ function buildNarrativeTokens(): NarrativeToken[] {
   return tokens;
 }
 
+const TOTAL_TL = 3.48;
+const PILLAR_JUMP_TIMES = [0.33, 0.62, 0.9, 1.19] as const;
+
 export function HeroOpeningSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const preloaderRef = useRef<HTMLDivElement | null>(null);
@@ -69,15 +96,35 @@ export function HeroOpeningSection() {
   const monogramZoomRef = useRef<HTMLDivElement | null>(null);
   const lightStageRef = useRef<HTMLDivElement | null>(null);
 
-  // Zero-rerender mutable refs driving 60fps 3-POV cosmos & ASCII swarm
+  // Zero-rerender mutable refs driving 60fps opening space cinema, 3D Astrolabe & ASCII swarm
+  const introCinemaRef = useRef<IntroCinemaState>({
+    progress: hasCompletedOpeningLoader ? 1 : 0,
+    detonateTick: 0,
+  });
   const cosmosStageRef = useRef<number>(0);
   const cosmosExitRef = useRef<number>(0);
+  const astrolabeFormRef = useRef<number>(0);
+  const astrolabePillarRef = useRef<number>(0);
+  const astrolabeBurstRef = useRef<number>(0);
+  const astrolabeSpinRef = useRef<number>(0);
+  const astrolabeHoverRef = useRef<AstrolabeHoverState>({
+    active: false,
+    x: 0,
+    y: 0,
+    color: "#2F6BF2",
+  });
+  const astrolabePulseRef = useRef<AstrolabePulseState>({
+    tick: 0,
+    x: 0,
+    y: 0,
+  });
   const portraitAssemblyRef = useRef<number>(0);
+  const portraitShiftRef = useRef<number>(0);
   const monogramMorphRef = useRef<number>(0);
 
   const [preloaderDone, setPreloaderDone] = useState(hasCompletedOpeningLoader);
-  const [heroCosmosActive, setHeroCosmosActive] = useState(hasCompletedOpeningLoader);
   const [heroCosmosPaused, setHeroCosmosPaused] = useState(false);
+  const [activePillar, setActivePillar] = useState(0);
   const [swarmActive, setSwarmActive] = useState(false);
   const [portraitMode, setPortraitMode] = useState<PortraitRenderMode>("ascii");
   const [wibTime, setWibTime] = useState("12:00:00");
@@ -117,11 +164,12 @@ export function HeroOpeningSection() {
       }
 
       /* =====================================================================
-       * 1. AWWWARDS SPLIT-SHUTTER OPENING (~2.5s) -> 3D ORBITAL METEOR COSMOS
+       * 1. CINEMATIC 4.5s OPENING FILM (Distant Nebula -> Implosion -> Fly-Through -> Hero)
        * =================================================================== */
       if (!hasCompletedOpeningLoader && preloaderRef.current) {
         if (reducedMotion) {
-          setHeroCosmosActive(true);
+          introCinemaRef.current.progress = 1;
+          gsap.set(".hero-display-wrap, .hero-chrome-enter", { opacity: 1, y: 0, scale: 1 });
           gsap.to(preloaderRef.current, {
             opacity: 0,
             duration: 0.4,
@@ -132,8 +180,9 @@ export function HeroOpeningSection() {
             },
           });
         } else {
-          gsap.set(".hero-mask-rise", { yPercent: 115 });
+          gsap.set(".hero-mask-rise", { yPercent: 112 });
           gsap.set(".hero-chrome-enter", { opacity: 0, y: 10 });
+          gsap.set(".hero-display-wrap", { scale: 0.96, opacity: 0 });
 
           const counterProxy = { val: 0 };
 
@@ -145,11 +194,12 @@ export function HeroOpeningSection() {
           });
 
           loaderTl
+            // Act I (0.00 -> 1.45): Distant Nebula Awakening + Razor Laser Charge 000 -> 100
             .to(
               counterProxy,
               {
                 val: 100,
-                duration: 1.72,
+                duration: 1.45,
                 ease: "power2.inOut",
                 onUpdate: () => {
                   if (loaderCounterRef.current) {
@@ -161,60 +211,98 @@ export function HeroOpeningSection() {
               },
               0
             )
+            .to(
+              introCinemaRef.current,
+              { progress: 0.34, duration: 1.45, ease: "power1.inOut" },
+              0
+            )
             .fromTo(
               ".loader-laser-line",
-              { scaleX: 0 },
-              { scaleX: 1, duration: 1.72, ease: "power2.inOut" },
+              { scaleX: 0, transformOrigin: "0% 50%" },
+              { scaleX: 1, duration: 1.45, ease: "power2.inOut" },
               0
             )
             .fromTo(
               ".loader-laser-tip",
               { left: "0%", opacity: 1 },
-              { left: "100%", opacity: 1, duration: 1.72, ease: "power2.inOut" },
+              { left: "100%", opacity: 1, duration: 1.45, ease: "power2.inOut" },
               0
             )
             .fromTo(
               ".loader-ghost-word",
-              { scale: 0.92, opacity: 0.1 },
-              { scale: 1.04, opacity: 0.52, duration: 1.72, ease: "power2.inOut" },
+              { scale: 0.94, opacity: 0.06 },
+              { scale: 1.02, opacity: 0.26, duration: 1.45, ease: "power2.inOut" },
               0
             )
+
+            // Act II (1.45 -> 1.92): Gravitational Implosion into Blazing Singularity
+            .to(
+              ".loader-laser-tip",
+              { opacity: 0, scale: 0.2, duration: 0.16, ease: "power2.out" },
+              1.45
+            )
+            .to(
+              ".loader-meta-strip",
+              { opacity: 0, y: -8, duration: 0.24, ease: "power2.inOut" },
+              1.45
+            )
+            .to(
+              ".loader-ghost-word",
+              { scale: 0.88, opacity: 0, duration: 0.32, ease: "power3.in" },
+              1.45
+            )
+            .set(".loader-laser-line", { transformOrigin: "50% 50%" }, 1.45)
             .to(
               ".loader-laser-line",
-              { scaleY: 2.2, opacity: 1, duration: 0.14, ease: "power2.out" },
-              1.72
+              { scaleX: 0.008, opacity: 0, duration: 0.42, ease: "power3.in" },
+              1.45
             )
+            .to(
+              introCinemaRef.current,
+              { progress: 0.45, duration: 0.47, ease: "power2.in" },
+              1.45
+            )
+
+            // Act III (1.92 -> 3.65): Unobstructed Singularity Detonation & Deep-Space Fly-Through Film
             .call(
               () => {
-                setHeroCosmosActive(true);
+                introCinemaRef.current.detonateTick += 1;
               },
               [],
-              1.82
+              1.92
             )
             .to(
-              ".loader-laser-line, .loader-laser-tip, .loader-meta-strip",
-              { opacity: 0, duration: 0.16, ease: "power2.out" },
-              1.88
+              introCinemaRef.current,
+              { progress: 0.89, duration: 1.73, ease: "none" },
+              1.92
+            )
+
+            // Act IV (3.65 -> 4.55): Hero Title & Chrome Arrival over Settled Orbit
+            .to(
+              introCinemaRef.current,
+              { progress: 1, duration: 0.45, ease: "power1.out" },
+              3.65
             )
             .to(
-              ".loader-shutter-top",
-              { yPercent: -100, duration: 0.78, ease: "awwwardsExpo" },
-              1.9
-            )
-            .to(
-              ".loader-shutter-bottom",
-              { yPercent: 100, duration: 0.78, ease: "awwwardsExpo" },
-              1.9
+              ".hero-display-wrap",
+              {
+                scale: 1,
+                opacity: 1,
+                duration: 0.85,
+                ease: "awwwardsExpo",
+                clearProps: "transform",
+              },
+              3.65
             )
             .to(
               ".hero-mask-rise",
               {
                 yPercent: 0,
-                stagger: 0.1,
-                duration: 0.84,
+                stagger: 0.09,
+                duration: 0.85,
                 ease: "awwwardsExpo",
               },
-              2.06
+              3.65
             )
             .to(
               ".hero-chrome-enter",
@@ -225,22 +313,22 @@ export function HeroOpeningSection() {
                 ease: "liquidRise",
                 clearProps: "transform",
               },
-              2.22
+              3.95
             );
         }
       } else {
-        setHeroCosmosActive(true);
+        introCinemaRef.current.progress = 1;
       }
 
       if (reducedMotion) return;
 
       /* =====================================================================
-       * ONE-TAKE 3-POV UNIVERSE + REFERENCE-INSPIRED PROFILE ILLUMINATION
-       * Scene 1 (Hero 0.0 -> 0.24) -> Scene 2 (Orbital Stack 0.24 -> 0.44) ->
-       * Scene 3 (Angled Cosmos + Fullscreen Swarm + Character Illumination 0.44 -> 1.60) ->
-       * Scene 4 (SB Morph & Vector Z-Dive 1.60 -> 2.42) -> Cool Cloud Projects
+       * ONE-TAKE 3-POV UNIVERSE + INTERACTIVE ASTROLABE + SIDE-BY-SIDE ILLUMINATED PROFILE
+       * Scene 1 (Hero 0.00 -> 0.24) ->
+       * Scene 2 (Scroll-Locked 4-Pillar Capabilities + 3D Cosmic Astrolabe 0.24 -> 1.28) ->
+       * Scene 3 (Astrolabe Bursts -> Portrait Showcase 1.48 -> 1.86 -> Slides Left + Right Bio 1.88 -> 2.66) ->
+       * Scene 4 (SB Morph & Vector Z-Dive 2.70 -> 3.48) -> Cool Cloud #F4F5F8 Projects
        * =================================================================== */
-      const TOTAL_TL = 2.42;
       const monogramTargetScale = lowEnd ? 1.45 : 1.98;
 
       const perfTargets = [
@@ -254,7 +342,7 @@ export function HeroOpeningSection() {
           id: "hero-journey",
           trigger: sectionRef.current,
           start: "top top",
-          end: "+=700%",
+          end: "+=980%",
           pin: true,
           scrub: lowEnd ? 0.5 : 0.82,
           anticipatePin: 1,
@@ -263,58 +351,80 @@ export function HeroOpeningSection() {
             perfTargets.forEach((el) => el.classList.toggle("is-animating", self.isActive));
             if (!self.isActive) {
               setSwarmActive(false);
+              astrolabeHoverRef.current.active = false;
             }
           },
           onUpdate: (self) => {
             const t = self.progress * TOTAL_TL;
 
-            // Continuous 3-POV stage inside the SAME universe:
-            // Hero (0) -> Stack Core (1) -> Diagonal Profile Vista (2)
+            // Continuous 3-POV stage inside ONE universe
             let nextStage = 0;
             if (t <= 0.24) {
-              nextStage = Math.max(0, t / 0.24);
-            } else if (t < 0.44) {
+              nextStage = clamp01(t / 0.24);
+            } else if (t < 1.28) {
               nextStage = 1;
-            } else if (t <= 0.72) {
-              nextStage = 1 + (t - 0.44) / 0.28;
+            } else if (t <= 1.58) {
+              nextStage = 1 + clamp01((t - 1.28) / 0.3);
             } else {
               nextStage = 2;
             }
             cosmosStageRef.current = nextStage;
 
-            // Fade cosmos cleanly ONLY when Cool Cloud daylight iris expands
-            cosmosExitRef.current = Math.max(0, Math.min(1, (t - 1.94) / 0.22));
-            const shouldPauseCosmos = t > 2.18;
-            setHeroCosmosPaused((prev) => (prev === shouldPauseCosmos ? prev : shouldPauseCosmos));
+            // 3D Cosmic Astrolabe morph (0.08..0.26 form, 0.26..1.28 hold, 1.28..1.50 dissolve into meteors)
+            let nextAstroForm = 0;
+            if (t >= 0.08 && t < 0.26) {
+              nextAstroForm = clamp01((t - 0.08) / 0.18);
+            } else if (t >= 0.26 && t <= 1.28) {
+              nextAstroForm = 1;
+            } else if (t > 1.28 && t <= 1.5) {
+              nextAstroForm = 1 - clamp01((t - 1.28) / 0.22);
+            }
+            astrolabeFormRef.current = nextAstroForm;
+            astrolabeBurstRef.current = Math.sin(clamp01((t - 1.26) / 0.24) * Math.PI);
 
-            // Fullscreen ASCII Swarm active strictly between Stack burst (0.42) and SB vector takeover (1.84)
-            const inSwarm = t >= 0.42 && t <= 1.84;
+            if (t < 0.14 || t > 1.26) {
+              astrolabeHoverRef.current.active = false;
+            }
+
+            const nextPillarProg = computePillarProgress(t);
+            astrolabePillarRef.current = nextPillarProg;
+            const roundedPillar = Math.round(nextPillarProg);
+            setActivePillar((prev) => (prev === roundedPillar ? prev : roundedPillar));
+
+            // Fullscreen ASCII Swarm active between Scene 2->3 unravel (1.26) and SB takeover (2.98)
+            const inSwarm = t >= 1.26 && t <= 2.98;
             setSwarmActive((prev) => (prev === inSwarm ? prev : inSwarm));
 
-            // Stack-to-Face Fullscreen Magnetic Vortex Gather (0.46 -> 0.76)
-            const gatherNorm = Math.max(0, Math.min(1, (t - 0.46) / 0.3));
-            portraitAssemblyRef.current = lowEnd ? 1 : gatherNorm;
+            // Astrolabe Orrery -> Face Fullscreen Magnetic Vortex Gather (1.30 -> 1.60)
+            portraitAssemblyRef.current = lowEnd ? 1 : clamp01((t - 1.3) / 0.3);
 
-            // Face -> Particle Burst -> Giant SB Monogram Morph (1.60 -> 1.80)
-            monogramMorphRef.current = Math.max(0, Math.min(1, (t - 1.6) / 0.2));
+            // Editorial Side-by-Side Shift: Face glides left before right-side bio enters (1.88 -> 2.06)
+            portraitShiftRef.current = clamp01((t - 1.88) / 0.18);
 
-            // Portrait mixed-media progression: ascii -> hybrid -> crisp borderless photo -> back to ascii for SB morph
+            // Shifted Face -> Swirl -> Centered Giant SB Monogram Morph (2.70 -> 2.92)
+            monogramMorphRef.current = clamp01((t - 2.7) / 0.22);
+
             if (!lowEnd) {
               const nextMode: PortraitRenderMode =
-                t >= 1.56
+                t >= 2.68
                   ? "ascii"
-                  : t >= 0.8
+                  : t >= 1.64
                   ? "photo"
-                  : t >= 0.7
+                  : t >= 1.54
                   ? "hybrid"
                   : "ascii";
               setPortraitMode((prev) => (prev === nextMode ? prev : nextMode));
             }
+
+            // Fade cosmos cleanly ONLY when Cool Cloud daylight iris expands
+            cosmosExitRef.current = clamp01((t - 3.06) / 0.2);
+            const shouldPauseCosmos = t > 3.28;
+            setHeroCosmosPaused((prev) => (prev === shouldPauseCosmos ? prev : shouldPauseCosmos));
           },
         },
       });
 
-      /* -------- PHASE 1 (0.00 -> 0.26): FLY INSIDE THE UNIVERSE -> ORBITAL TECH STACK -------- */
+      /* -------- PHASE 1 (0.00 -> 0.28): FLY INSIDE COSMOS -> SCROLL-LOCKED CAPABILITIES & ASTROLABE -------- */
       tl.to(
         sectionRef.current,
         { backgroundColor: "#0D1524", duration: 0.24, ease: "liquidFlow" },
@@ -363,196 +473,198 @@ export function HeroOpeningSection() {
           { opacity: 0, pointerEvents: "none", duration: 0.18, ease: "liquidFlow" },
           0.08
         )
-        // Clean decluttered Stack headline & 16 orbital constellation nodes inside cosmos core
-        .fromTo(
-          ".scene2-editorial",
-          { opacity: 0, y: 26, clipPath: "inset(16% 0% 0% 0%)", pointerEvents: "none" },
-          {
-            opacity: 1,
-            y: 0,
-            clipPath: "inset(0% 0% 0% 0%)",
-            pointerEvents: "auto",
-            duration: 0.18,
-            ease: "liquidRise",
-          },
-          0.14
-        )
         .fromTo(
           ".scene2-chrome",
           { opacity: 0, y: -10 },
           { opacity: 1, y: 0, duration: 0.14, ease: "liquidFlow" },
-          0.16
-        )
-        .fromTo(
-          ".tech-cards-stage",
-          { opacity: 0, scale: 0.92 },
-          { opacity: 1, scale: 1, duration: 0.18, ease: "liquidRise" },
           0.15
         )
         .fromTo(
+          ".tech-cards-stage",
+          { opacity: 0, scale: 0.94 },
+          { opacity: 1, scale: 1, duration: 0.15, ease: "liquidRise" },
+          0.15
+        )
+        .fromTo(
+          ".scene2-editorial",
+          { opacity: 0, y: 24, pointerEvents: "none" },
+          { opacity: 1, y: 0, pointerEvents: "auto", duration: 0.16, ease: "liquidRise" },
+          0.16
+        )
+        .fromTo(
+          ".orrery-stage",
+          { pointerEvents: "none" },
+          { pointerEvents: "auto", duration: 0.01 },
+          0.16
+        )
+        .fromTo(
           ".tech-card-converge",
-          { opacity: 0, scale: 0.8 },
-          { opacity: 1, scale: 1, stagger: 0.007, duration: 0.13, ease: "liquidRise" },
+          { opacity: 0, scale: 0.84 },
+          { opacity: 1, scale: 1, stagger: 0.008, duration: 0.13, ease: "liquidRise" },
           0.16
         )
 
-        /* -------- PHASE 2 (0.42 -> 0.56): ORBITAL SHATTER + POV SHIFT -> PORTRAIT SWARM -------- */
+        /* -------- PHASE 2 (1.26 -> 1.44): ASTROLABE BURST + ORBITAL DISSOLVE -> PORTRAIT SWARM -------- */
         .fromTo(
           ".scene3-fullscreen-swarm",
           { opacity: 0 },
           { opacity: 1, duration: 0.1, ease: "liquidFlow" },
-          0.42
+          1.26
+        )
+        .to(
+          ".scene2-chrome",
+          { opacity: 0, y: -14, duration: 0.11, ease: "liquidFlow" },
+          1.26
+        )
+        .to(
+          ".scene2-editorial",
+          { opacity: 0, y: -22, pointerEvents: "none", duration: 0.12, ease: "liquidFlow" },
+          1.26
+        )
+        .to(
+          ".orrery-stage",
+          { pointerEvents: "none", duration: 0.01 },
+          1.26
         )
         .to(
           ".tech-card-converge",
           {
-            scale: 1.15,
+            scale: 1.14,
             opacity: 0,
-            stagger: 0.004,
-            duration: 0.1,
+            stagger: 0.006,
+            duration: 0.11,
             ease: "liquidFlow",
           },
-          0.44
+          1.28
         )
         .to(
           ".tech-cards-stage",
-          { opacity: 0, pointerEvents: "none", duration: 0.1, ease: "liquidFlow" },
-          0.46
-        )
-        .to(
-          ".scene2-editorial, .scene2-chrome",
-          {
-            opacity: 0,
-            y: -20,
-            pointerEvents: "none",
-            duration: 0.1,
-            ease: "liquidFlow",
-          },
-          0.44
+          { opacity: 0, pointerEvents: "none", duration: 0.12, ease: "liquidFlow" },
+          1.3
         )
 
-        /* -------- PHASE 3 BEAT A (0.56 -> 0.88): MONUMENTAL BORDERLESS PORTRAIT SHOWCASE -------- */
+        /* -------- PHASE 3 BEAT A (1.48 -> 1.84): MONUMENTAL CENTERED PORTRAIT SHOWCASE -------- */
         .fromTo(
           ".scene3-chrome",
           { opacity: 0 },
           { opacity: 1, duration: 0.12, ease: "liquidFlow" },
-          0.56
+          1.48
         )
         .fromTo(
           ".scene3-intro-meta",
           { y: 16, opacity: 0 },
           { y: 0, opacity: 1, stagger: 0.04, duration: 0.16, ease: "liquidRise" },
-          0.62
+          1.54
         )
         .fromTo(
           ".scene3-wordmark",
           { y: 26, opacity: 0 },
           { y: 0, opacity: 1, stagger: 0.04, duration: 0.18, ease: "liquidRise" },
-          0.66
+          1.58
         )
 
-        /* -------- PHASE 3 BEAT B (0.88 -> 1.00): SOFT FOCUS SHIFT -> RADIAL NARRATIVE VEIL -------- */
+        /* -------- PHASE 3 BEAT B (1.86 -> 2.04): PORTRAIT GLIDES LEFT -> RIGHT EDITORIAL VEIL -------- */
         .to(
           ".scene3-wordmark, .scene3-intro-meta",
           { y: 14, opacity: 0, duration: 0.12, ease: "liquidFlow" },
-          0.88
+          1.86
         )
         .fromTo(
           ".scene3-narrative-veil",
           { opacity: 0 },
-          { opacity: 1, duration: 0.14, ease: "liquidFlow" },
-          0.88
+          { opacity: 1, duration: 0.15, ease: "liquidFlow" },
+          1.88
         )
 
-        /* -------- PHASE 3 BEAT C (0.96 -> 1.54): CHARACTER-BY-CHARACTER WHITE ILLUMINATION -------- */
+        /* -------- PHASE 3 BEAT C (2.02 -> 2.64): SIDE-BY-SIDE RIGHT WHITE ILLUMINATION -------- */
         .fromTo(
           ".scene3-narrative-wrap",
           { opacity: 0 },
           { opacity: 1, duration: 0.08, ease: "liquidFlow" },
-          0.95
+          2.02
         )
         .fromTo(
           ".profile-char",
-          { opacity: 0.14, y: 6 },
+          { opacity: 0.14, y: 5 },
           {
             opacity: 1,
             y: 0,
-            stagger: 0.0018,
+            stagger: 0.0022,
             duration: 0.03,
             ease: "none",
           },
-          0.98
+          2.04
         )
         .fromTo(
           ".scene3-narrative-foot",
           { y: 12, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.1, ease: "liquidRise" },
-          1.4
+          2.52
         )
 
-        /* -------- PHASE 4 (1.54 -> 1.84): FACE -> PARTICLE SWIRL -> GIANT SB MONOGRAM -------- */
+        /* -------- PHASE 4 (2.64 -> 2.98): LEFT PORTRAIT -> SWIRL -> GIANT SB MONOGRAM -------- */
         .to(
           ".scene3-narrative-wrap, .scene3-narrative-veil, .scene3-chrome",
           { opacity: 0, duration: 0.1, ease: "liquidFlow" },
-          1.54
+          2.64
         )
         .fromTo(
           ".portal-entry-hud",
           { opacity: 0, y: 10 },
           { opacity: 1, y: 0, duration: 0.14, ease: "liquidFlow" },
-          1.64
+          2.74
         )
         .fromTo(
           ".outlined-name-bg",
           { scale: 0.86, opacity: 0, letterSpacing: "0.14em" },
           { scale: 1, opacity: 1, letterSpacing: "-0.04em", duration: 0.16, ease: "liquidFlow" },
-          1.64
+          2.74
         )
         .fromTo(
           monogramZoomRef.current,
           { scale: 0.36, opacity: 0 },
           { scale: 0.36, opacity: 1, duration: 0.08, ease: "liquidFlow" },
-          1.76
+          2.86
         )
         .to(
           ".scene3-fullscreen-swarm",
           { opacity: 0, duration: 0.08, ease: "liquidFlow" },
-          1.78
+          2.88
         )
 
-        /* -------- PHASE 5 (1.84 -> 2.42): VECTOR SB Z-DIVE -> LIQUID IRIS -> COOL CLOUD #F4F5F8 -------- */
+        /* -------- PHASE 5 (2.96 -> 3.48): VECTOR SB Z-DIVE -> LIQUID IRIS -> COOL CLOUD #F4F5F8 -------- */
         .to(
           ".portal-entry-hud",
           { opacity: 0, y: -12, duration: 0.12, ease: "liquidFlow" },
-          1.84
+          2.96
         )
         .to(
           ".outlined-name-bg",
-          { scale: 1.55, opacity: 0, duration: 0.26, ease: "liquidFlow" },
-          1.84
+          { scale: 1.55, opacity: 0, duration: 0.24, ease: "liquidFlow" },
+          2.96
         )
         .to(
           monogramZoomRef.current,
-          { scale: monogramTargetScale, duration: 0.32, ease: "liquidFlow" },
-          1.84
+          { scale: monogramTargetScale, duration: 0.3, ease: "liquidFlow" },
+          2.96
         )
         .to(
           monogramZoomRef.current,
           { opacity: 0, duration: 0.1, ease: "liquidFlow" },
-          2.08
+          3.18
         )
         .fromTo(
           ".portal-iris-ring",
           { scale: 0.05, opacity: 0 },
           { scale: 1.7, opacity: 0.88, duration: 0.28, ease: "liquidFlow" },
-          1.94
+          3.04
         )
-        .to(".portal-iris-ring", { opacity: 0, duration: 0.1, ease: "liquidFlow" }, 2.16)
+        .to(".portal-iris-ring", { opacity: 0, duration: 0.1, ease: "liquidFlow" }, 3.26)
         .fromTo(
           lightStageRef.current,
           { clipPath: "circle(0% at 50% 50%)" },
           { clipPath: "circle(130% at 50% 50%)", duration: 0.3, ease: "liquidFlow" },
-          1.96
+          3.06
         )
         .fromTo(
           ".portal-reveal-line",
@@ -562,35 +674,36 @@ export function HeroOpeningSection() {
             opacity: 1,
             clipPath: "inset(0% 0% 0% 0%)",
             stagger: 0.04,
-            duration: 0.18,
+            duration: 0.16,
             ease: "liquidRise",
           },
-          2.1
+          3.2
         )
         .fromTo(
           ".portal-editorial-meta",
           { y: 16, opacity: 0 },
           { y: 0, opacity: 1, stagger: 0.03, duration: 0.14, ease: "liquidRise" },
-          2.18
+          3.28
         )
         .fromTo(
           ".portal-drift-bg",
           { yPercent: 5 },
           { yPercent: -5, duration: 0.32, ease: "none" },
-          2.1
+          3.16
         )
         .fromTo(
           ".portal-drift-mid",
           { yPercent: 8 },
           { yPercent: -10, duration: 0.32, ease: "none" },
-          2.1
+          3.16
         )
         .fromTo(
           ".portal-drift-fg",
           { yPercent: 6 },
           { yPercent: -10, duration: 0.32, ease: "none" },
-          2.1
-        );
+          3.16
+        )
+        .to({}, { duration: 0.001 }, TOTAL_TL - 0.001);
     },
     { scope: sectionRef }
   );
@@ -601,51 +714,39 @@ export function HeroOpeningSection() {
     scrollToPosition(st.start + (st.end - st.start) * fraction);
   };
 
+  const handleSelectPillar = (index: number) => {
+    const targetTime = PILLAR_JUMP_TIMES[index] ?? PILLAR_JUMP_TIMES[0];
+    scrollToJourneyStage(targetTime / TOTAL_TL);
+  };
+
   return (
     <section
       id="hero-opening"
       ref={sectionRef}
       className="relative h-screen min-h-[640px] w-full overflow-hidden bg-[#0B0D12] text-[#F4F5F8] select-none"
     >
-      {/* ================= 1. AWWWARDS SPLIT-SHUTTER LASER OPENING (~2.5s) ================= */}
+      {/* ================= 1. TRANSPARENT LASER CHARGE OVERLAY -> 4.5s SPACE FILM ================= */}
       {!preloaderDone && (
         <div
           ref={preloaderRef}
           className="fixed inset-0 z-[90] overflow-hidden pointer-events-none"
         >
-          {/* Top Cinema Blast Door */}
-          <div className="loader-shutter-top absolute inset-x-0 top-0 flex h-1/2 items-end justify-center overflow-hidden bg-[#0B0D12]">
-            <div className="translate-y-1/2">
-              <span
-                className="loader-ghost-word font-unbounded block text-[15.5vw] font-black leading-none tracking-tighter uppercase"
-                style={{
-                  WebkitTextStroke: "1.5px rgba(199,216,252,0.32)",
-                  color: "transparent",
-                }}
-              >
-                STEVBEQ
-              </span>
-            </div>
+          {/* Faint Ghost Watermark collapsing cleanly into Singularity */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span
+              className="loader-ghost-word font-unbounded block text-[15.5vw] font-black leading-none tracking-tighter uppercase"
+              style={{
+                WebkitTextStroke: "1.5px rgba(199,216,252,0.28)",
+                color: "transparent",
+              }}
+            >
+              STEVBEQ
+            </span>
           </div>
 
-          {/* Bottom Cinema Blast Door */}
-          <div className="loader-shutter-bottom absolute inset-x-0 bottom-0 flex h-1/2 items-start justify-center overflow-hidden bg-[#0B0D12]">
-            <div className="-translate-y-1/2">
-              <span
-                className="loader-ghost-word font-unbounded block text-[15.5vw] font-black leading-none tracking-tighter uppercase"
-                style={{
-                  WebkitTextStroke: "1.5px rgba(199,216,252,0.32)",
-                  color: "transparent",
-                }}
-              >
-                STEVBEQ
-              </span>
-            </div>
-          </div>
-
-          {/* Razor-Sharp Horizontal Royal Blue Laser Seam slicing 0vw -> 100vw */}
+          {/* Razor-Sharp Horizontal Royal Blue Laser Seam */}
           <div className="absolute top-1/2 right-0 left-0 z-20 -translate-y-1/2">
-            <div className="h-px w-full bg-white/[0.08]" />
+            <div className="h-px w-full bg-white/[0.06]" />
             <div
               className="loader-laser-line absolute top-0 left-0 h-[2px] w-full origin-left"
               style={{
@@ -683,12 +784,19 @@ export function HeroOpeningSection() {
         }}
       />
 
-      {/* ================= SHARED 3-POV UNIVERSE (HERO -> STACK CORE -> DIAGONAL PROFILE) ================= */}
+      {/* ================= SHARED 3-POV UNIVERSE + OPENING FILM + 3D ASTROLABE ================= */}
       <HeroInkExplosionCanvas
-        active={heroCosmosActive}
+        active={true}
         paused={heroCosmosPaused}
+        introCinemaRef={introCinemaRef}
         cosmosStageRef={cosmosStageRef}
         cosmosExitRef={cosmosExitRef}
+        astrolabeFormRef={astrolabeFormRef}
+        astrolabePillarRef={astrolabePillarRef}
+        astrolabeBurstRef={astrolabeBurstRef}
+        astrolabeSpinRef={astrolabeSpinRef}
+        astrolabeHoverRef={astrolabeHoverRef}
+        astrolabePulseRef={astrolabePulseRef}
         className="z-10"
       />
 
@@ -698,53 +806,59 @@ export function HeroOpeningSection() {
         className="hero-stage-shell absolute inset-0 z-20 flex h-full w-full flex-col justify-between px-6 py-4 sm:px-10"
       >
         {/* Minimal Hairline Top Navigation */}
-        <header className="hero-top-header hero-chrome-enter pointer-events-auto relative z-20 mx-auto flex h-14 w-full max-w-7xl shrink-0 items-center justify-between border-b border-white/10 font-mono text-xs text-white/65">
-          <div className="flex items-center gap-3">
-            <img
-              src="/assets/logo/LogoDark.webp"
-              alt="StevBeq Brand Mark"
-              className="h-8 w-8 rounded-lg border border-white/15 object-cover"
-            />
-            <span className="font-bold tracking-widest text-[#F4F5F8] uppercase">
-              STEVBEQ
-            </span>
-          </div>
+        <div className={`hero-chrome-enter shrink-0 ${preloaderDone ? "" : "opacity-0"}`}>
+          <header className="hero-top-header pointer-events-auto relative z-20 mx-auto flex h-14 w-full max-w-7xl items-center justify-between border-b border-white/10 font-mono text-xs text-white/65">
+            <div className="flex items-center gap-3">
+              <img
+                src="/assets/logo/LogoDark.webp"
+                alt="StevBeq Brand Mark"
+                className="h-8 w-8 rounded-lg border border-white/15 object-cover"
+              />
+              <span className="font-bold tracking-widest text-[#F4F5F8] uppercase">
+                STEVBEQ
+              </span>
+            </div>
 
-          <nav className="flex items-center gap-5 sm:gap-7">
-            <button
-              type="button"
-              onClick={() => scrollToJourneyStage(0.14)}
-              className="transition hover:text-white cursor-pointer"
-            >
-              STACK
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToJourneyStage(0.46)}
-              className="transition hover:text-white cursor-pointer"
-            >
-              PROFILE
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection("#selected-projects")}
-              className="transition hover:text-white cursor-pointer"
-            >
-              WORK
-            </button>
-            <a
-              href={STEVBEQ_PROFILE.contact.github}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[#9DB8FB] transition hover:text-white"
-            >
-              GITHUB ↗
-            </a>
-          </nav>
-        </header>
+            <nav className="flex items-center gap-5 sm:gap-7">
+              <button
+                type="button"
+                onClick={() => scrollToJourneyStage(0.33 / TOTAL_TL)}
+                className="transition hover:text-white cursor-pointer"
+              >
+                STACK
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToJourneyStage(1.74 / TOTAL_TL)}
+                className="transition hover:text-white cursor-pointer"
+              >
+                PROFILE
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection("#selected-projects")}
+                className="transition hover:text-white cursor-pointer"
+              >
+                WORK
+              </button>
+              <a
+                href={STEVBEQ_PROFILE.contact.github}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[#9DB8FB] transition hover:text-white"
+              >
+                GITHUB ↗
+              </a>
+            </nav>
+          </header>
+        </div>
 
         {/* Monumental Edge-to-Edge Editorial Display */}
-        <div className="pointer-events-none relative z-20 mx-auto my-auto flex w-full max-w-7xl flex-col items-center justify-center px-2 text-center">
+        <div
+          className={`hero-display-wrap pointer-events-none relative z-20 mx-auto my-auto flex w-full max-w-7xl flex-col items-center justify-center px-2 text-center ${
+            preloaderDone ? "" : "opacity-0"
+          }`}
+        >
           <div className="hero-display-line-1 overflow-hidden py-1">
             <h1 className="hero-mask-rise font-display text-[15vw] font-extrabold leading-[0.86] tracking-[-0.04em] text-[#F4F5F8] uppercase drop-shadow-[0_14px_45px_rgba(11,13,18,0.85)] sm:text-[11.5vw] lg:text-[9.5rem]">
               STEVEN
@@ -764,55 +878,51 @@ export function HeroOpeningSection() {
         </div>
 
         {/* Clean Professional Bottom Telemetry */}
-        <footer className="hero-bottom-footer hero-chrome-enter relative z-20 mx-auto grid h-14 w-full max-w-7xl shrink-0 grid-cols-2 items-center gap-3 border-t border-white/10 font-mono text-[10px] text-white/50 sm:grid-cols-3 sm:text-[11px]">
-          <div className="truncate">
-            <span className="text-white/75">YOGYAKARTA · WIB {wibTime}</span>
-          </div>
-          <div className="hidden items-center justify-center gap-2 text-white/45 sm:flex">
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: "var(--thread)" }}
-            />
-            <span className="tracking-[0.22em] uppercase">FULLSTACK WEB &amp; MOBILE</span>
-          </div>
-          <div className="text-right">
-            <span className="tracking-[0.2em] text-[#C7D8FC] uppercase">SCROLL ↓</span>
-          </div>
-        </footer>
-      </div>
-
-      {/* ================= SCENE 2: COSMIC ORBITAL CONSTELLATION (NO CLUTTER, NO FLOATING SB CARD!) ================= */}
-      <div className="scene2-chrome pointer-events-none absolute top-4 inset-x-0 z-20 mx-auto flex h-14 max-w-7xl items-center justify-between border-b border-white/10 px-6 font-mono text-[11px] tracking-widest text-white/50 uppercase opacity-0 sm:px-10">
-        <span>02 // CAPABILITIES</span>
-        <span className="text-[#9DB8FB]">WEB &amp; MOBILE ARCHITECTURE</span>
-      </div>
-
-      <FluidTechStackLayer />
-
-      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6">
-        <div className="scene2-editorial flex max-w-lg flex-col items-center text-center opacity-0">
-          <h2 className="font-display text-4xl font-extrabold tracking-tight text-[#F4F5F8] sm:text-5xl lg:text-[3.5rem] leading-[1.08]">
-            Built with a{" "}
-            <span className="font-serif-italic font-normal text-[#2F6BF2] transition-colors duration-300 hover:text-[#9DB8FB]">
-              steady hand
-            </span>
-            .
-          </h2>
-
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-[#94A3B8] sm:text-base">
-            Web platforms and Flutter apps share one discipline: clean architecture first, motion
-            last.
-          </p>
+        <div className={`hero-chrome-enter shrink-0 ${preloaderDone ? "" : "opacity-0"}`}>
+          <footer className="hero-bottom-footer relative z-20 mx-auto grid h-14 w-full max-w-7xl grid-cols-2 items-center gap-3 border-t border-white/10 font-mono text-[10px] text-white/50 sm:grid-cols-3 sm:text-[11px]">
+            <div className="truncate">
+              <span className="text-white/75">YOGYAKARTA · WIB {wibTime}</span>
+            </div>
+            <div className="hidden items-center justify-center gap-2 text-white/45 sm:flex">
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: "var(--thread)" }}
+              />
+              <span className="tracking-[0.22em] uppercase">FULLSTACK WEB &amp; MOBILE</span>
+            </div>
+            <div className="text-right">
+              <span className="tracking-[0.2em] text-[#C7D8FC] uppercase">SCROLL ↓</span>
+            </div>
+          </footer>
         </div>
       </div>
 
-      {/* ================= SCENE 3: CONTINUOUS UNIVERSE + FULLSCREEN SWARM + CHARACTER ILLUMINATION ================= */}
+      {/* ================= SCENE 2: SCROLL-LOCKED 4-PILLAR CAPABILITIES + 3D COSMIC ASTROLABE ================= */}
+      <div className="scene2-chrome pointer-events-none absolute top-4 inset-x-0 z-20 mx-auto flex h-14 max-w-7xl items-center justify-between border-b border-white/10 px-6 font-mono text-[11px] tracking-widest text-white/50 uppercase opacity-0 sm:px-10">
+        <span>02 // CAPABILITIES</span>
+        <span className="text-[#9DB8FB]">
+          {CAPABILITY_PILLARS[activePillar]?.index ?? "01"} / 04 ·{" "}
+          {CAPABILITY_PILLARS[activePillar]?.eyebrow ?? "WEB PLATFORMS"}
+        </span>
+      </div>
+
+      <FluidTechStackLayer
+        activePillar={activePillar}
+        pillarProgressRef={astrolabePillarRef}
+        astrolabeSpinRef={astrolabeSpinRef}
+        astrolabeHoverRef={astrolabeHoverRef}
+        astrolabePulseRef={astrolabePulseRef}
+        onSelectPillar={handleSelectPillar}
+      />
+
+      {/* ================= SCENE 3: CONTINUOUS UNIVERSE + SLIDE-LEFT PORTRAIT + SIDE-BY-SIDE BIO ================= */}
       <div className="scene3-fullscreen-swarm pointer-events-none absolute inset-0 z-[24] opacity-0">
         <AsciiParticlePortrait
           src="/assets/me/Foto-Semi-Formal.webp"
           defaultMode="ascii"
           controlledMode={portraitMode}
           assemblyRef={portraitAssemblyRef}
+          portraitShiftRef={portraitShiftRef}
           monogramMorphRef={monogramMorphRef}
           cellSize={4}
           tintBlue={true}
@@ -829,7 +939,7 @@ export function HeroOpeningSection() {
         <span>YOGYAKARTA, ID</span>
       </div>
 
-      {/* Beat A Corner Whispers & Bottom Split STEV / BEQ Framing Portrait */}
+      {/* Beat A Corner Whisper & Bottom Split STEV / BEQ Framing Portrait */}
       <div className="scene3-intro-meta pointer-events-none absolute top-24 left-6 z-30 opacity-0 sm:left-10">
         <p className="font-mono text-[10px] font-bold tracking-[0.22em] text-[#9DB8FB] uppercase">
           FULLSTACK WEB &amp; MOBILE
@@ -837,12 +947,6 @@ export function HeroOpeningSection() {
         <p className="mt-1.5 max-w-[210px] text-xs leading-relaxed text-white/65">
           Crafting scalable web platforms &amp; cross-platform Flutter apps.
         </p>
-      </div>
-
-      <div className="scene3-intro-meta pointer-events-none absolute top-24 right-6 z-30 opacity-0 sm:right-10">
-        <span className="font-display text-4xl font-extrabold tracking-tight text-white/80 sm:text-5xl">
-          &rsquo;26
-        </span>
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-20 z-[25] mx-auto flex max-w-7xl items-end justify-between px-6 sm:px-10">
@@ -857,20 +961,32 @@ export function HeroOpeningSection() {
         </span>
       </div>
 
-      {/* Beat B: Soft Radial Navy Veil (NO hard card border — lets Steven subtly illuminate beneath!) */}
-      <div
-        aria-hidden
-        className="scene3-narrative-veil pointer-events-none absolute inset-0 z-[26] opacity-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 68% 64% at 50% 50%, rgba(9, 17, 38, 0.72) 0%, rgba(13, 21, 36, 0.36) 64%, transparent 100%)",
-        }}
-      />
+      {/* Beat B: Responsive Directional Navy Veil — Keeps Left Portrait / Upper Portrait 100% Clear! */}
+      <div aria-hidden className="scene3-narrative-veil pointer-events-none absolute inset-0 z-[26] opacity-0">
+        <div
+          className="hidden h-full w-full md:block"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(13,21,36,0) 0%, rgba(13,21,36,0) 41%, rgba(9,17,38,0.68) 62%, rgba(9,17,38,0.84) 100%)",
+          }}
+        />
+        <div
+          className="h-full w-full md:hidden"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(13,21,36,0) 0%, rgba(13,21,36,0) 40%, rgba(9,17,38,0.78) 60%, rgba(9,17,38,0.92) 100%)",
+          }}
+        />
+      </div>
 
-      {/* Beat C: Reference-Inspired Per-Character White Illumination Narrative */}
-      <div className="scene3-narrative-wrap pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-6 opacity-0">
-        <div className="max-w-[680px] text-left sm:text-center">
-          <p className="font-display text-2xl font-bold leading-[1.32] tracking-tight sm:text-3xl lg:text-[2.15rem]">
+      {/* Beat C: Side-by-Side Right-Half Per-Character White Illumination Narrative */}
+      <div className="scene3-narrative-wrap pointer-events-none absolute inset-0 z-30 mx-auto flex max-w-7xl items-end justify-center px-6 pb-24 opacity-0 md:items-center md:justify-end md:px-10 md:pb-0">
+        <div className="w-full max-w-lg border-l-2 border-[#2F6BF2]/45 pl-4 text-left md:w-[50%] md:pl-7 lg:w-[48%]">
+          <p className="mb-3 font-mono text-[10px] font-semibold tracking-[0.22em] text-[#9DB8FB] uppercase">
+            03 / STEVEN ARNALDO · PROFILE
+          </p>
+
+          <p className="font-display text-xl font-bold leading-[1.32] tracking-tight sm:text-2xl lg:text-[1.95rem] xl:text-[2.15rem]">
             {narrativeTokens.map((tok) =>
               tok.kind === "space" ? (
                 <React.Fragment key={tok.id}> </React.Fragment>
@@ -896,7 +1012,7 @@ export function HeroOpeningSection() {
             )}
           </p>
 
-          <p className="scene3-narrative-foot mt-6 font-mono text-[11px] tracking-[0.22em] text-white/55 uppercase opacity-0">
+          <p className="scene3-narrative-foot mt-5 font-mono text-[10px] tracking-[0.2em] text-white/55 uppercase opacity-0 sm:text-[11px]">
             7°47&rsquo;S 110°22&rsquo;E · YOGYAKARTA · PT. INDO TECHNO MEDIC · UKDW &amp; UTY
           </p>
         </div>
